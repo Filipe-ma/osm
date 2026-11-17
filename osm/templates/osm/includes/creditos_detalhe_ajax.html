@@ -1,0 +1,22 @@
+{% load humanize %}
+<div style="padding: 12px 20px;">
+  <strong><i class="fa-solid fa-coins"></i> Todos os créditos de {{ emp.numero_contrato }}</strong>
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+    {% for cred in creditos %}
+    <div class="credito-card-mini">
+      <div><span class="valor">MT {{ cred.valor|floatformat:2 }}</span></div>
+      <div style="font-size: 11px;">Juros: {{ cred.taxa_juros }}% · Multa: {{ cred.taxa_multa }}%/dia</div>
+      <div style="font-size: 11px;">Vence: {{ cred.vencimento|date:"d/m/Y" }}</div>
+      <div>
+        {% if not cred.esta_quitado %}
+          <span class="status-badge-mini" style="background:#fff3cd; color:#856404;">▶ Em andamento</span>
+        {% else %}
+          <span class="status-badge-mini" style="background:#d1e7dd; color:#0f5132;">✓ Quitado</span>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="text-muted">Nenhum crédito registado</div>
+    {% endfor %}
+  </div>
+</div>

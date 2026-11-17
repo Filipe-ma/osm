@@ -1,0 +1,579 @@
+{% extends "osm/base.html" %}
+{% block title %}Configurações — OSM{% endblock %}
+{% block nav_config %}active{% endblock %}
+{% block topbar_title %}Configurações do Sistema{% endblock %}
+{% block topbar_sub %}Taxas · SMS · Email · Conta{% endblock %}
+
+{% block extra_css %}
+<style>
+.cfg-tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid var(--border); padding-bottom:0; }
+.cfg-tab {
+  padding:9px 18px; border-radius:8px 8px 0 0; font-size:13px; font-weight:600;
+  cursor:pointer; border:none; background:none; color:var(--text3);
+  transition:all .18s; position:relative; bottom:-2px;
+  border:2px solid transparent; border-bottom:none;
+}
+.cfg-tab:hover { color:var(--text); background:var(--surface2); }
+.cfg-tab.active { background:var(--surface); color:var(--accent); border-color:var(--border); border-bottom-color:var(--surface); }
+.cfg-panel { display:none; }
+.cfg-panel.active { display:block; }
+
+.api-key-wrap { position:relative; }
+.api-key-wrap input { padding-right:44px; font-family:var(--ff-mono); font-size:12px; }
+.api-key-toggle { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text3); font-size:14px; }
+.api-key-toggle:hover { color:var(--accent); }
+
+.status-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+}
+.status-pill.active { background:var(--success-l); color:var(--success); }
+.status-pill.inactive { background:var(--border); color:var(--text3); }
+
+.cfg-section-title {
+  font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text3); padding:14px 0 8px; border-bottom:1px solid var(--border); margin-bottom:14px;
+}
+.toggle-switch { position:relative; width:42px; height:24px; flex-shrink:0; }
+.toggle-switch input { opacity:0; width:0; height:0; }
+.toggle-slider {
+  position:absolute; inset:0; background:var(--border); border-radius:12px; cursor:pointer;
+  transition:.3s;
+}
+.toggle-slider::before {
+  content:''; position:absolute; width:18px; height:18px; left:3px; top:3px;
+  background:white; border-radius:50%; transition:.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background:var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); }
+.toggle-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; gap:12px; }
+.toggle-info { flex:1; }
+.toggle-label { font-size:13px; font-weight:600; color:var(--text); }
+.toggle-hint { font-size:11px; color:var(--text3); margin-top:2px; }
+
+.test-result { display:none; margin-top:12px; padding:10px 14px; border-radius:8px; font-size:12.5px; }
+.test-result.ok { background:var(--success-l); color:var(--success); }
+.test-result.err { background:var(--danger-l); color:var(--danger); }
+
+.kv-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); gap:12px; }
+.kv-row:last-child { border-bottom:none; }
+.kv-key { font-size:12px; color:var(--text3); flex-shrink:0; }
+.kv-val { font-size:13px; color:var(--text); font-weight:600; text-align:right; font-family:var(--ff-mono); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="fa-solid fa-gear" style="color:var(--accent)"></i> Configurações</h1>
+    <p>Gerir taxas, SMS, Email e dados da conta</p>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="cfg-tabs">
+  <button class="cfg-tab active" onclick="switchTab('conta')"><i class="fa-solid fa-user"></i> Conta</button>
+  <button class="cfg-tab" onclick="switchTab('taxas')"><i class="fa-solid fa-percent"></i> Taxas</button>
+  <button class="cfg-tab" onclick="switchTab('sms')">
+    <i class="fa-solid fa-comment-sms"></i> SMS
+    {% if not banco.bulksms_api_token %}<span style="margin-left:4px;font-size:10px;background:var(--warn-l);color:var(--warn);padding:1px 6px;border-radius:8px">Por configurar</span>{% endif %}
+  </button>
+  <button class="cfg-tab" onclick="switchTab('email')">
+    <i class="fa-solid fa-envelope"></i> Email
+    {% if not banco.email_ativo %}<span style="margin-left:4px;font-size:10px;background:var(--border);color:var(--text3);padding:1px 6px;border-radius:8px">Inactivo</span>{% endif %}
+  </button>
+</div>
+
+<!-- ═══════════ PAINEL: CONTA ═══════════ -->
+<div id="tab-conta" class="cfg-panel active">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Conta -->
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title"><i class="fa-solid fa-user-circle"></i> Minha Conta</div></div>
+      </div>
+      <div class="card-body">
+        <div class="kv-row"><span class="kv-key">Nome</span><span class="kv-val" style="font-family:var(--ff)">{{ user.nome_completo }}</span></div>
+        <div class="kv-row"><span class="kv-key">Username</span><span class="kv-val">{{ user.username }}</span></div>
+        <div class="kv-row"><span class="kv-key">Email</span><span class="kv-val" style="font-size:12px">{{ user.email|default:"—" }}</span></div>
+        <div class="kv-row"><span class="kv-key">Perfil</span><span class="kv-val">{{ user.label_perfil }}</span></div>
+        <div class="kv-row" style="border:none"><span class="kv-key">Contratos</span><span class="kv-val" style="color:var(--accent)">{{ total }}</span></div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <a href="{% url 'exportar_csv' %}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-download"></i> Exportar CSV</a>
+          {% if user.eh_superadmin %}<a href="/admin/" class="btn btn-secondary btn-sm" target="_blank"><i class="fa-solid fa-gear"></i> Django Admin</a>{% endif %}
+          <a href="{% url 'trocar_senha' %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-key"></i> Trocar Senha</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dados bancários -->
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title"><i class="fa-solid fa-building-columns"></i> Dados Bancários</div></div>
+        {% if request.user.eh_superadmin %}<button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('bank-edit').style.display='block';this.style.display='none'"><i class="fa-solid fa-pen"></i> Editar</button>{% endif %}
+      </div>
+      <div class="card-body">
+        <div class="kv-row"><span class="kv-key">Banco</span><span class="kv-val" style="font-family:var(--ff)">{{ banco.banco }}</span></div>
+        <div class="kv-row"><span class="kv-key">Conta</span><span class="kv-val">{{ banco.conta }}</span></div>
+        <div class="kv-row"><span class="kv-key">NIB</span><span class="kv-val" style="font-size:11px">{{ banco.nib }}</span></div>
+        <div class="kv-row" style="border:none"><span class="kv-key">Titular</span><span class="kv-val" style="font-family:var(--ff)">{{ banco.titular }}</span></div>
+      </div>
+      <div id="bank-edit" style="display:none;padding:18px;border-top:1px solid var(--border)">
+        <form method="post" action="{% url 'banco_editar' %}">
+          {% csrf_token %}
+          <div class="form-grid-2">
+            <div class="form-group"><label class="form-label">Banco</label><input name="banco" class="form-control" value="{{ banco.banco }}"></div>
+            <div class="form-group"><label class="form-label">NIB</label><input name="nib" class="form-control" value="{{ banco.nib }}"></div>
+            <div class="form-group"><label class="form-label">Conta</label><input name="conta" class="form-control" value="{{ banco.conta }}"></div>
+            <div class="form-group"><label class="form-label">Titular</label><input name="titular" class="form-control" value="{{ banco.titular }}"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-check"></i> Guardar</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('bank-edit').style.display='none'">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PAINEL: TAXAS ═══════════ -->
+<div id="tab-taxas" class="cfg-panel">
+  {% if user.eh_superadmin %}
+  <div class="card" style="max-width:780px">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa-solid fa-percent"></i> Taxas Globais do Sistema</div>
+        <div class="card-subtitle">Aplicadas a todos os novos empréstimos</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info" style="margin-bottom:20px">
+        <i class="fa-solid fa-lock"></i>
+        Alterações <strong>não afectam contratos já existentes</strong>. Apenas novos contratos criados após esta data.
+      </div>
+      <form method="post" action="{% url 'taxas_editar' %}">
+        {% csrf_token %}
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label form-label-required">Juro Mensal (%)</label>
+            <input name="taxa_juros_padrao" id="tx-juros" class="form-control" type="number" step="0.5" min="1" max="100" value="{{ banco.taxa_juros_padrao }}" required>
+            <div class="form-hint">Actual: <strong>{{ banco.taxa_juros_padrao }}%</strong>/mês</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required">Multa/Dia (%)</label>
+            <input name="taxa_multa_padrao" id="tx-multa" class="form-control" type="number" step="0.5" min="0" max="100" value="{{ banco.taxa_multa_padrao }}" required>
+            <div class="form-hint">Actual: <strong>{{ banco.taxa_multa_padrao }}%</strong>/dia</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required">Dias Tolerância</label>
+            <input name="prazo_multa_dias" id="tx-prazo" class="form-control" type="number" min="1" max="90" value="{{ banco.prazo_multa_dias }}" required>
+            <div class="form-hint">Actual: <strong>{{ banco.prazo_multa_dias }} dias</strong></div>
+          </div>
+        </div>
+        <!-- Preview -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Simulação com MT 10.000</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px;color:var(--text2)">
+            <div><div style="color:var(--text3);font-size:10px;margin-bottom:2px">Total 1 mês</div><div style="font-family:var(--ff-mono);font-weight:700;color:var(--accent)" id="ex-total">—</div></div>
+            <div><div style="color:var(--text3);font-size:10px;margin-bottom:2px">Multa dia 1</div><div style="font-family:var(--ff-mono);font-weight:700;color:var(--danger)" id="ex-multa1">—</div></div>
+            <div><div style="color:var(--text3);font-size:10px;margin-bottom:2px">Máximo total</div><div style="font-family:var(--ff-mono);font-weight:700;color:var(--warn)" id="ex-max">—</div></div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" onclick="return confirm('Actualizar taxas globais?')">
+          <i class="fa-solid fa-check"></i> Guardar Taxas
+        </button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="max-width:700px">
+    <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-simple"></i> Taxas do Sistema</div></div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;text-align:center">
+        <div style="background:var(--accent-l);border-radius:10px;padding:18px">
+          <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Juro Mensal</div>
+          <div style="font-family:var(--ff-mono);font-size:30px;font-weight:800;color:var(--accent)">{{ banco.taxa_juros_padrao }}%</div>
+        </div>
+        <div style="background:var(--danger-l);border-radius:10px;padding:18px">
+          <div style="font-size:10px;color:var(--danger);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Multa/Dia</div>
+          <div style="font-family:var(--ff-mono);font-size:30px;font-weight:800;color:var(--danger)">{{ banco.taxa_multa_padrao }}%</div>
+        </div>
+        <div style="background:var(--warn-l);border-radius:10px;padding:18px">
+          <div style="font-size:10px;color:var(--warn);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Tolerância</div>
+          <div style="font-family:var(--ff-mono);font-size:30px;font-weight:800;color:var(--warn)">{{ banco.prazo_multa_dias }}d</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text3)">Taxas definidas pelo superadmin. O prazo de cada empréstimo é fixo em 30 dias.</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══════════ PAINEL: SMS ═══════════ -->
+<div id="tab-sms" class="cfg-panel">
+  {% if user.eh_superadmin %}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:960px">
+
+    <!-- Config BulkSMS -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="fa-solid fa-satellite-dish"></i> Configuração BulkSMS</div>
+          <div class="card-subtitle">API de envio de SMS em massa</div>
+        </div>
+        {% if banco.bulksms_api_token %}
+        <span class="status-pill active"><i class="fa-solid fa-circle" style="font-size:7px"></i> Configurado</span>
+        {% else %}
+        <span class="status-pill inactive"><i class="fa-solid fa-circle" style="font-size:7px"></i> Pendente</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'sms_config_editar' %}">
+          {% csrf_token %}
+          <div class="cfg-section-title">Credenciais BulkSMS</div>
+
+          <div class="form-group">
+            <label class="form-label">API Token <a href="https://www.bulksms.com/account/" target="_blank" style="font-size:10px;color:var(--accent);margin-left:4px"><i class="fa-solid fa-external-link-alt"></i> Obter</a></label>
+            <div class="api-key-wrap">
+              <input type="password" id="api-token-input" name="bulksms_api_token" class="form-control"
+                     placeholder="Cole aqui o seu API Token do BulkSMS"
+                     value="{{ banco.bulksms_api_token }}">
+              <button type="button" class="api-key-toggle" onclick="toggleApiKey()" title="Mostrar/ocultar">
+                <i class="fa-solid fa-eye" id="api-key-eye"></i>
+              </button>
+            </div>
+            <div class="form-hint">
+              <i class="fa-solid fa-shield-halved"></i> Guardado de forma segura no servidor.
+              Não partilhe este token.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nome do Remetente</label>
+            <input name="bulksms_sender" class="form-control" maxlength="11"
+                   value="{{ banco.bulksms_sender|default:'OSM' }}"
+                   placeholder="ex: OSM (máx. 11 car.)">
+            <div class="form-hint">Aparece como remetente no telemóvel do cliente</div>
+          </div>
+
+          <div class="cfg-section-title">Alertas Automáticos</div>
+
+          <div class="form-group">
+            <label class="form-label">Dias antes do vencimento para alerta</label>
+            <input name="sms_alerta_dias" class="form-control" type="number" min="1" max="30"
+                   value="{{ banco.sms_alerta_dias|default:3 }}">
+            <div class="form-hint">Clientes recebem SMS X dias antes da parcela vencer</div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Cobrança automática diária</div>
+              <div class="toggle-hint">Envio automático de SMS a clientes em atraso (executar cron diário)</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="sms_cobranca_auto" value="1" {% if banco.sms_cobranca_auto %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <input type="hidden" name="email_smtp_host" value="{{ banco.email_smtp_host }}">
+          <input type="hidden" name="email_smtp_port" value="{{ banco.email_smtp_port }}">
+          <input type="hidden" name="email_smtp_user" value="{{ banco.email_smtp_user }}">
+          <input type="hidden" name="email_smtp_tls" value="{{ banco.email_smtp_tls|yesno:'1,0' }}">
+          <input type="hidden" name="email_ativo" value="{{ banco.email_ativo|yesno:'1,0' }}">
+
+          <div style="margin-top:18px">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar SMS</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Testar + Templates -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <!-- Testar SMS -->
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-vial"></i> Testar Envio</div></div>
+        <div class="card-body">
+          {% if not banco.bulksms_api_token %}
+          <div class="alert alert-warning"><i class="fa-solid fa-triangle-exclamation"></i> Configure o API Token primeiro</div>
+          {% endif %}
+          <form method="post" action="{% url 'testar_sms' %}" id="test-form">
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-label">Número de Teste</label>
+              <input name="telefone_teste" class="form-control" placeholder="+258 84 000 0000" type="tel">
+              <div class="form-hint">Número que irá receber o SMS de teste</div>
+            </div>
+            <button type="submit" class="btn btn-secondary" {% if not banco.bulksms_api_token %}disabled{% endif %}>
+              <i class="fa-solid fa-paper-plane"></i> Enviar Teste
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Estatísticas SMS -->
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-chart-bar"></i> Estatísticas SMS</div></div>
+        <div class="card-body" style="padding:14px 20px">
+          <div class="kv-row"><span class="kv-key">Total enviados</span><span class="kv-val" style="color:var(--accent)">{{ sms_total|default:"0" }}</span></div>
+          <div class="kv-row"><span class="kv-key">Este mês</span><span class="kv-val">{{ sms_mes|default:"0" }}</span></div>
+          <div class="kv-row" style="border:none"><span class="kv-key">Último envio</span><span class="kv-val" style="font-family:var(--ff);font-size:12px">{{ ultimo_sms|date:"d/m/Y H:i"|default:"—" }}</span></div>
+          <div style="margin-top:12px">
+            <a href="{% url 'cobranca' %}" class="btn btn-primary btn-sm btn-full">
+              <i class="fa-solid fa-comment-sms"></i> Ir para Cobrança SMS
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Como integrar -->
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-circle-info"></i> Como Integrar</div></div>
+        <div class="card-body" style="font-size:12px;color:var(--text2);line-height:1.8">
+          <ol style="padding-left:16px;margin:0">
+            <li>Criar conta em <strong>bulksms.com</strong></li>
+            <li>Ir a <strong>Account → API Tokens</strong></li>
+            <li>Criar token com permissão <em>Send Messages</em></li>
+            <li>Colar o token no campo acima</li>
+            <li>Configurar saldo na conta BulkSMS</li>
+          </ol>
+          <div style="margin-top:10px;padding:8px;background:var(--accent-l);border-radius:6px;font-size:11px;color:var(--accent)">
+            <i class="fa-solid fa-lightbulb"></i> SMS para Moçambique (.mz): usar prefixo <strong>+258</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="max-width:520px">
+    <div class="card-body" style="text-align:center;padding:32px">
+      <i class="fa-solid fa-lock" style="font-size:36px;color:var(--text3);margin-bottom:12px"></i>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">Acesso Restrito</div>
+      <div style="font-size:13px;color:var(--text3)">Apenas o superadmin pode configurar integrações SMS.</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══════════ PAINEL: EMAIL ═══════════ -->
+<div id="tab-email" class="cfg-panel">
+  {% if user.eh_superadmin %}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:960px">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="fa-solid fa-envelope"></i> Configuração SMTP</div>
+          <div class="card-subtitle">Envio de emails do sistema</div>
+        </div>
+        {% if banco.email_ativo %}
+        <span class="status-pill active"><i class="fa-solid fa-circle" style="font-size:7px"></i> Activo</span>
+        {% else %}
+        <span class="status-pill inactive"><i class="fa-solid fa-circle" style="font-size:7px"></i> Inactivo</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'sms_config_editar' %}">
+          {% csrf_token %}
+          <!-- Hidden SMS fields to preserve them -->
+          <input type="hidden" name="bulksms_api_token" value="{{ banco.bulksms_api_token }}">
+          <input type="hidden" name="bulksms_sender" value="{{ banco.bulksms_sender|default:'OSM' }}">
+          <input type="hidden" name="sms_alerta_dias" value="{{ banco.sms_alerta_dias|default:3 }}">
+          <input type="hidden" name="sms_cobranca_auto" value="{{ banco.sms_cobranca_auto|yesno:'1,0' }}">
+
+          <div class="toggle-row" style="margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+            <div class="toggle-info">
+              <div class="toggle-label">Activar envio de emails</div>
+              <div class="toggle-hint">Credenciais, notificações e alertas por email</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="email_ativo" value="1" {% if banco.email_ativo %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label form-label-required">Servidor SMTP</label>
+              <input name="email_smtp_host" class="form-control" placeholder="smtp.gmail.com" value="{{ banco.email_smtp_host|default:'smtp.gmail.com' }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label form-label-required">Porta</label>
+              <input name="email_smtp_port" class="form-control" type="number" placeholder="587" value="{{ banco.email_smtp_port|default:587 }}">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email de Envio</label>
+            <input name="email_smtp_user" class="form-control" type="email"
+                   placeholder="noreply@ossm.co.mz"
+                   value="{{ banco.email_smtp_user }}">
+            <div class="form-hint">Endereço de email que aparece como remetente</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Senha de Aplicação</label>
+            <div class="api-key-wrap">
+              <input type="password" id="smtp-pass" name="email_smtp_pass" class="form-control"
+                     placeholder="{% if banco.email_smtp_pass %}••••••••••••{% else %}Senha de aplicação{% endif %}">
+              <button type="button" class="api-key-toggle" onclick="toggleSmtpPass()" title="Mostrar/ocultar">
+                <i class="fa-solid fa-eye" id="smtp-eye"></i>
+              </button>
+            </div>
+            <div class="form-hint">
+              <i class="fa-brands fa-google"></i> Gmail: Conta → Segurança → Senhas de aplicativo
+              {% if banco.email_smtp_pass %}<span style="color:var(--success)"> · Senha configurada</span>{% endif %}
+            </div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Usar TLS (recomendado)</div>
+              <div class="toggle-hint">Encriptação da ligação ao servidor SMTP</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="email_smtp_tls" value="1" {% if banco.email_smtp_tls %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div style="margin-top:18px">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar Email</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Guia de configuração -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-brands fa-google"></i> Gmail — Passo a Passo</div></div>
+        <div class="card-body" style="font-size:12.5px;color:var(--text2);line-height:2">
+          <div class="cfg-section-title">Configuração recomendada</div>
+          <div class="kv-row"><span class="kv-key">Servidor</span><span class="kv-val">smtp.gmail.com</span></div>
+          <div class="kv-row"><span class="kv-key">Porta</span><span class="kv-val">587</span></div>
+          <div class="kv-row" style="border:none"><span class="kv-key">TLS</span><span class="kv-val">Sim</span></div>
+
+          <div class="cfg-section-title" style="margin-top:16px">Obter senha de aplicação</div>
+          <ol style="padding-left:16px;margin:0;line-height:2.2">
+            <li>Activar <strong>verificação em 2 etapas</strong> no Gmail</li>
+            <li>Ir a: Conta Google → Segurança</li>
+            <li>Clicar em <strong>"Senhas de aplicativo"</strong></li>
+            <li>Seleccionar <em>Outro (nome personalizado)</em></li>
+            <li>Digitar <em>OSM Microcrédito</em> e gerar</li>
+            <li>Copiar a senha de 16 dígitos</li>
+          </ol>
+          <div style="margin-top:10px;padding:8px;background:var(--warn-l);border-radius:6px;font-size:11px;color:var(--warn)">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            Nunca use a senha da conta Google. Use sempre a <strong>senha de aplicação</strong>.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-paper-plane"></i> Emails Enviados Pelo Sistema</div></div>
+        <div class="card-body" style="font-size:12.5px;color:var(--text2)">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:6px">
+              <i class="fa-solid fa-user-plus" style="color:var(--accent);width:16px"></i>
+              <span>Credenciais ao criar novo utilizador</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:6px">
+              <i class="fa-solid fa-bell" style="color:var(--warn);width:16px"></i>
+              <span>Alertas de parcelas próximas do vencimento</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:6px">
+              <i class="fa-solid fa-file-invoice-dollar" style="color:var(--gold-d);width:16px"></i>
+              <span>Recibos de pagamento confirmados</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:6px">
+              <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);width:16px"></i>
+              <span>Notificações de inadimplência</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="max-width:520px">
+    <div class="card-body" style="text-align:center;padding:32px">
+      <i class="fa-solid fa-lock" style="font-size:36px;color:var(--text3);margin-bottom:12px"></i>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">Acesso Restrito</div>
+      <div style="font-size:13px;color:var(--text3)">Apenas o superadmin pode configurar integrações de Email.</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+// ── TABS ─────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.cfg-tab').forEach((t, i) => {
+    const ids = ['conta','taxas','sms','email'];
+    t.classList.toggle('active', ids[i] === name);
+  });
+  document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  if (panel) { panel.classList.add('active'); panel.style.animation = 'fadeUp .2s ease'; }
+  // Persistir tab activo
+  localStorage.setItem('cfg_tab', name);
+}
+
+// Restaurar tab activo
+(function(){
+  const saved = localStorage.getItem('cfg_tab');
+  if (saved && ['conta','taxas','sms','email'].includes(saved)) switchTab(saved);
+})();
+
+// ── API KEY TOGGLE ────────────────────────────────
+function toggleApiKey() {
+  const inp = document.getElementById('api-token-input');
+  const eye = document.getElementById('api-key-eye');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    eye.className = 'fa-solid fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    eye.className = 'fa-solid fa-eye';
+  }
+}
+function toggleSmtpPass() {
+  const inp = document.getElementById('smtp-pass');
+  const eye = document.getElementById('smtp-eye');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    eye.className = 'fa-solid fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    eye.className = 'fa-solid fa-eye';
+  }
+}
+
+// ── SIMULAÇÃO TAXAS ───────────────────────────────
+{% if user.eh_superadmin %}
+function updateExample() {
+  const cap = 10000;
+  const tj  = parseFloat(document.getElementById('tx-juros')?.value) || 30;
+  const tm  = parseFloat(document.getElementById('tx-multa')?.value) || 2;
+  const pd  = parseInt(document.getElementById('tx-prazo')?.value)   || 5;
+  const total  = cap * (1 + tj / 100);
+  const multa1 = total * (tm / 100);
+  const max    = total * (1 + tm / 100 * pd);
+  const fmt = v => 'MT ' + Math.round(v).toLocaleString('pt-PT');
+  const et = document.getElementById('ex-total');
+  const em = document.getElementById('ex-multa1');
+  const ex = document.getElementById('ex-max');
+  if (et) et.textContent = fmt(total);
+  if (em) em.textContent = fmt(multa1);
+  if (ex) ex.textContent = fmt(max);
+}
+['tx-juros','tx-multa','tx-prazo'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', updateExample);
+});
+updateExample();
+{% endif %}
+{% endblock %}

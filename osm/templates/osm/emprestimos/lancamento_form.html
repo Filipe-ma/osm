@@ -1,0 +1,637 @@
+{% extends "osm/base.html" %}
+{% block title %}Lançar Pagamento — {{ emp.numero_contrato }}{% endblock %}
+{% block nav_emprestimos %}active{% endblock %}
+{% block topbar_title %}Lançar Pagamento{% endblock %}
+{% block topbar_sub %}{{ emp.numero_contrato }} · {{ emp.nome }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'lancamentos_lista' emp.pk %}" class="btn btn-secondary btn-sm">
+  <i class="fa-solid fa-list-check"></i> Histórico
+</a>
+<a href="{% url 'emprestimo_detalhe' emp.pk %}" class="btn btn-secondary btn-sm">
+  <i class="fa-solid fa-arrow-left"></i> Voltar
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── MÉTODO CARDS ─────────────────────────────── */
+.metodo-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.metodo-card {
+  position: relative;
+  border: 2.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 10px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .2s cubic-bezier(.4,0,.2,1);
+  background: var(--surface2);
+  user-select: none;
+  overflow: hidden;
+}
+.metodo-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity .2s;
+  border-radius: 12px;
+}
+.metodo-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+.metodo-card input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
+
+/* Selected tick */
+.metodo-card .tick {
+  position: absolute; top: 8px; right: 8px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: transparent; border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: transparent;
+  transition: all .18s;
+}
+.metodo-card.sel .tick { border-color: currentColor; background: currentColor; }
+.metodo-card.sel .tick::after { content: '✓'; color: white; font-size: 10px; font-weight: 900; }
+
+.metodo-icon { font-size: 26px; margin-bottom: 8px; line-height: 1; }
+.metodo-label { font-size: 12px; font-weight: 800; letter-spacing: .3px; }
+.metodo-sub   { font-size: 10px; margin-top: 3px; opacity: .65; }
+
+/* Colour themes per method */
+.m-dinheiro     { --mc: #2e7d32; --mcl: rgba(46,125,50,.1); }
+.m-transferencia{ --mc: #1565c0; --mcl: rgba(21,101,192,.1); }
+.m-mpesa        { --mc: #c62828; --mcl: rgba(198,40,40,.1); }
+.m-mkesh        { --mc: #e65100; --mcl: rgba(230,81,0,.1); }
+.m-emola        { --mc: #00695c; --mcl: rgba(0,105,92,.1); }
+.m-outro        { --mc: #4527a0; --mcl: rgba(69,39,160,.1); }
+
+.metodo-card.sel {
+  border-color: var(--mc) !important;
+  background: var(--mcl) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mc) 15%, transparent) !important;
+  transform: translateY(-3px);
+}
+.metodo-card .metodo-icon { color: var(--mc); }
+.metodo-card .tick { border-color: var(--mc); }
+.metodo-card.sel .tick { background: var(--mc); border-color: var(--mc); }
+
+/* ── TIPO PAGAMENTO ──────────────────────────── */
+.tipo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+.tipo-card {
+  border: 2.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 14px;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--surface2);
+  position: relative;
+}
+.tipo-card input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
+.tipo-card .tipo-icon { font-size: 22px; margin-bottom: 8px; }
+.tipo-card .tipo-title { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+.tipo-card .tipo-desc  { font-size: 11.5px; color: var(--text3); line-height: 1.45; }
+.tipo-card.sel-total   { border-color: var(--success); background: var(--success-l); }
+.tipo-card.sel-parcial { border-color: var(--warn);    background: var(--warn-l); }
+.tipo-card .tick2 {
+  position: absolute; top: 10px; right: 10px;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+  transition: all .18s;
+}
+.tipo-card.sel-total  .tick2 { background: var(--success); border-color: var(--success); }
+.tipo-card.sel-parcial .tick2 { background: var(--warn); border-color: var(--warn); }
+.tipo-card.sel-total  .tick2::after,
+.tipo-card.sel-parcial .tick2::after { content:'✓'; color:white; font-size:11px; font-weight:900; }
+
+/* ── SUMMARY BOX ─────────────────────────────── */
+.summary-box {
+  background: linear-gradient(135deg,#0a1628 0%,#1e3a5f 100%);
+  border-radius: 16px; padding: 22px 24px; color: #fff;
+  margin-bottom: 20px; border: 1px solid rgba(255,255,255,.07);
+  box-shadow: 0 8px 32px rgba(10,22,40,.25);
+}
+.sum-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.sum-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.45); margin-bottom: 5px; }
+.sum-val   { font-size: 20px; font-weight: 700; font-family: var(--ff-mono); color: #fff; line-height: 1; }
+.sum-gold  { color: #ffd54f; }
+.sum-red   { color: #ff6b6b; }
+.sum-sub   { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 4px; }
+
+/* ── AVISO ───────────────────────────────────── */
+.aviso-box {
+  border-radius: 10px; padding: 13px 16px; font-size: 13px;
+  display: none; align-items: flex-start; gap: 10px;
+  border-left: 4px solid; animation: fadeUp .2s ease;
+  margin-bottom: 16px;
+}
+.aviso-box.show { display: flex; }
+.aviso-ok  { background: var(--success-l); border-color: var(--success); color: #1b5e20; }
+.aviso-pend{ background: var(--warn-l);    border-color: var(--warn);    color: #bf360c; }
+.aviso-info{ background: var(--accent-l);  border-color: var(--accent);  color: #0d47a1; }
+
+/* ── VALOR INPUT ─────────────────────────────── */
+.val-wrap { position: relative; }
+.val-prefix {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 12px; font-weight: 700; color: var(--text3); pointer-events: none;
+}
+.val-wrap .form-control {
+  padding-left: 40px; font-family: var(--ff-mono);
+  font-size: 18px; font-weight: 700; height: 52px;
+}
+
+/* ── RECIBO MODAL ────────────────────────────── */
+#reciboModal {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+#reciboModal.show { display: flex; }
+.recibo-box {
+  background: var(--surface); border-radius: 20px; width: 100%; max-width: 480px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.4); overflow: hidden;
+  animation: slideUp .3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes slideUp { from { opacity:0; transform:translateY(30px) scale(.96); } to { opacity:1; transform:none; } }
+.recibo-header {
+  background: linear-gradient(135deg,#0a1628,#1565c0);
+  padding: 28px 28px 20px; color: #fff; text-align: center;
+}
+.recibo-logo { font-size: 36px; margin-bottom: 8px; }
+.recibo-title { font-size: 18px; font-weight: 800; letter-spacing: .5px; }
+.recibo-sub   { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 4px; }
+.recibo-body  { padding: 24px 28px; }
+.recibo-row   { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.recibo-row:last-child { border: none; }
+.recibo-key   { color: var(--text3); font-size: 12px; }
+.recibo-val   { font-weight: 700; font-family: var(--ff-mono); }
+.recibo-total {
+  background: linear-gradient(135deg,rgba(21,101,192,.08),rgba(21,101,192,.04));
+  border-radius: 12px; padding: 16px 20px; margin: 16px 0;
+  text-align: center; border: 1px solid rgba(21,101,192,.15);
+}
+.recibo-total-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 6px; }
+.recibo-total-val   { font-size: 32px; font-weight: 800; font-family: var(--ff-mono); color: var(--accent); }
+.recibo-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  margin-top: 8px;
+}
+.recibo-status.imediato { background: var(--success-l); color: var(--success); }
+.recibo-status.pendente { background: var(--warn-l);    color: #e65100; }
+.recibo-footer { padding: 0 28px 24px; display: flex; gap: 10px; }
+
+@media(max-width:600px) {
+  .metodo-grid { grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .sum-grid    { grid-template-columns: 1fr 1fr; }
+  .tipo-grid   { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto">
+
+  <!-- ── SUMMARY ────────────────────────────── -->
+  <div class="summary-box">
+    <div class="sum-grid">
+      <div>
+        <div class="sum-label">Cliente</div>
+        <div class="sum-val" style="font-size:15px">{{ emp.nome }}</div>
+        <div class="sum-sub">{{ emp.numero_contrato }}</div>
+      </div>
+      <div>
+        <div class="sum-label">Capital + Juros</div>
+        <div class="sum-val sum-gold">MT {{ emp.total_a_pagar|floatformat:2 }}</div>
+        <div class="sum-sub">Juro {{ emp.taxa_juros }}%/mês</div>
+      </div>
+      <div>
+        {% if emp.status == 'vencido' or emp.status == 'incumprimento' %}
+        <div class="sum-label">Total c/ Multa</div>
+        <div class="sum-val sum-red">MT {{ emp.total_com_multa|floatformat:2 }}</div>
+        <div class="sum-sub" style="color:#ff9a9a">{{ emp.dias_atraso }}d atraso · +{{ emp.mora_composta|floatformat:2 }} MT</div>
+        {% elif emp.saldo_restante is not None %}
+        <div class="sum-label">Saldo Restante</div>
+        <div class="sum-val" style="color:#ffd54f">MT {{ emp.saldo_restante|floatformat:2 }}</div>
+        <div class="sum-sub">Parcial em curso</div>
+        {% else %}
+        <div class="sum-label">Vencimento</div>
+        <div class="sum-val" style="font-size:16px">{{ emp.data_vencimento|date:"d/m/Y" }}</div>
+        <div class="sum-sub">{{ emp.get_status_display }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.35);margin-bottom:5px">
+        <span>Progresso do prazo</span><span>{{ emp.progresso }}%</span>
+      </div>
+      <div style="height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:{{ emp.progresso }}%;background:{% if emp.status in 'vencido,incumprimento' %}#ff6b6b{% else %}#ffd54f{% endif %};border-radius:3px;transition:width .6s ease"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FORM CARD ──────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa-solid fa-money-bill-wave" style="color:var(--success)"></i> Registar Pagamento</div>
+        <div class="card-subtitle">Seleccione método e preencha os detalhes</div>
+      </div>
+      {% if emp.status == 'vencido' or emp.status == 'incumprimento' %}
+      <span class="badge" style="background:var(--danger-l);color:var(--danger);border:1px solid rgba(198,40,40,.2)">
+        <i class="fa-solid fa-triangle-exclamation"></i> {{ emp.dias_atraso }}d atraso
+      </span>
+      {% endif %}
+    </div>
+
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" id="lancForm">
+        {% csrf_token %}
+
+        <!-- MÉTODO ────────────────────────────── -->
+        <div class="form-group">
+          <label class="form-label form-label-required">
+            <i class="fa-solid fa-credit-card"></i> Método de Pagamento
+          </label>
+          <div class="metodo-grid">
+
+            {% if eh_staff %}
+            <label class="metodo-card m-dinheiro" data-metodo="dinheiro">
+              <input type="radio" name="metodo" value="dinheiro">
+              <div class="tick"></div>
+              <div class="metodo-icon"><i class="fa-solid fa-money-bills"></i></div>
+              <div class="metodo-label">Dinheiro</div>
+              <div class="metodo-sub">Imediato ✓</div>
+            </label>
+            {% endif %}
+
+            <label class="metodo-card m-transferencia" data-metodo="transferencia">
+              <input type="radio" name="metodo" value="transferencia">
+              <div class="tick"></div>
+              <div class="metodo-icon"><i class="fa-solid fa-building-columns"></i></div>
+              <div class="metodo-label">Transferência</div>
+              <div class="metodo-sub">Bancária</div>
+            </label>
+
+            <label class="metodo-card m-mpesa" data-metodo="mpesa">
+              <input type="radio" name="metodo" value="mpesa">
+              <div class="tick"></div>
+              <div class="metodo-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+              <div class="metodo-label">M-Pesa</div>
+              <div class="metodo-sub">Vodacom</div>
+            </label>
+
+            <label class="metodo-card m-mkesh" data-metodo="mkesh">
+              <input type="radio" name="metodo" value="mkesh">
+              <div class="tick"></div>
+              <div class="metodo-icon"><i class="fa-solid fa-mobile-alt"></i></div>
+              <div class="metodo-label">mKesh</div>
+              <div class="metodo-sub">Mcel</div>
+            </label>
+
+            <label class="metodo-card m-emola" data-metodo="emola">
+              <input type="radio" name="metodo" value="emola">
+              <div class="tick"></div>
+              <div class="metodo-icon"><i class="fa-solid fa-wallet"></i></div>
+              <div class="metodo-label">eWallet / Emola</div>
+              <div class="metodo-sub">Movitel</div>
+            </label>
+
+            <label class="metodo-card m-outro" data-metodo="outro">
+              <input type="radio" name="metodo" value="outro">
+              <div class="tick"></div>
+              <div class="metodo-icon"><i class="fa-solid fa-circle-question"></i></div>
+              <div class="metodo-label">Outro</div>
+              <div class="metodo-sub">Especificar</div>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- AVISO IMEDIATO/PENDENTE ─────────────── -->
+        <div class="aviso-box" id="avisoBox">
+          <i class="fa-solid fa-circle-info" style="margin-top:1px;flex-shrink:0"></i>
+          <span id="avisoTxt"></span>
+        </div>
+
+        <!-- TIPO PAGAMENTO ──────────────────────── -->
+        <div class="form-group">
+          <label class="form-label form-label-required">
+            <i class="fa-solid fa-sliders"></i> Tipo de Pagamento
+          </label>
+          <div class="tipo-grid">
+            <label class="tipo-card" id="tc-total">
+              <input type="radio" name="tipo_pagamento" value="total" checked>
+              <div class="tick2"></div>
+              <div class="tipo-icon"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i></div>
+              <div class="tipo-title">Pagamento Total</div>
+              <div class="tipo-desc">Quita o empréstimo completamente. Mora pára imediatamente.</div>
+            </label>
+            <label class="tipo-card" id="tc-parcial">
+              <input type="radio" name="tipo_pagamento" value="parcial">
+              <div class="tick2"></div>
+              <div class="tipo-icon"><i class="fa-solid fa-chart-line" style="color:var(--warn)"></i></div>
+              <div class="tipo-title">Pagamento Parcial</div>
+              <div class="tipo-desc">Desconta do saldo. Mora {{ emp.taxa_multa }}%/dia continua sobre o restante.</div>
+            </label>
+          </div>
+          <div id="aviso-parcial" style="display:none;padding:11px 14px;background:var(--warn-l);border-left:3px solid var(--warn);border-radius:8px;font-size:12.5px;color:#bf360c;margin-top:8px">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <strong>Atenção:</strong> A mora de {{ emp.taxa_multa }}%/dia (composta) continuará a acumular sobre o saldo restante.
+            No dia seguinte ao pagamento, recomeça a contar sobre o novo saldo.
+          </div>
+        </div>
+
+        <!-- VALOR E DATA ─────────────────────────── -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label form-label-required">
+              <i class="fa-solid fa-coins"></i> Valor Pago (MT)
+            </label>
+            <div class="val-wrap">
+              <span class="val-prefix">MT</span>
+              <input type="number" name="valor_pago" id="valorInput" class="form-control"
+                     step="0.01" min="0.01"
+                     value="{{ emp.total_com_multa|floatformat:2 }}" required>
+            </div>
+            <div class="form-hint" id="valorHint">
+              Total recomendado: MT {{ emp.total_com_multa|floatformat:2 }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required">
+              <i class="fa-regular fa-calendar"></i> Data do Pagamento
+            </label>
+            <input type="date" name="data_pagamento" id="dataInput" class="form-control"
+                   value="{{ hoje }}" required>
+            <div class="form-hint">
+              <i class="fa-solid fa-info-circle" style="color:var(--accent)"></i>
+              Pode seleccionar uma data futura para registar pagamento adiantado.
+            </div>
+          </div>
+        </div>
+
+        <!-- CAMPOS DIGITAIS ─────────────────────── -->
+        <div id="digitalFields" style="display:none">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fa-solid fa-hashtag"></i> Referência / ID da Transacção
+            </label>
+            <input type="text" name="referencia" id="refInput" class="form-control"
+                   placeholder="Ex: TXN123456, ref M-Pesa, nº transferência...">
+            <div class="form-hint">Copie directamente do comprovativo.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fa-solid fa-image"></i> Comprovativo (foto ou PDF)
+            </label>
+            <input type="file" name="foto_comprovativo" class="form-control" accept="image/*,.pdf">
+            <div class="form-hint">Foto do ecrã ou PDF do recibo digital.</div>
+          </div>
+        </div> 
+
+        <!-- NOTAS ───────────────────────────────── -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fa-regular fa-note-sticky"></i> Notas
+          </label>
+          <textarea name="notas" id="notasInput" class="form-control" rows="2"
+                    placeholder="Observações relevantes sobre este pagamento..."></textarea>
+        </div>
+
+        <!-- BOTÕES ──────────────────────────────── -->
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap">
+          <a href="{% url 'emprestimo_detalhe' emp.pk %}" class="btn btn-secondary">
+            <i class="fa-solid fa-xmark"></i> Cancelar
+          </a>
+          <button type="submit" class="btn btn-primary btn-lg" id="btnSubmit">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span id="btnText">Registar Pagamento</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Info fluxo -->
+  <div class="card" style="border:1px dashed var(--border)">
+    <div class="card-body" style="padding:13px 18px">
+      <div style="font-size:12px;color:var(--text3);display:flex;gap:20px;flex-wrap:wrap">
+        <span><i class="fa-solid fa-money-bills" style="color:#2e7d32"></i> <strong style="color:var(--text2)">Dinheiro:</strong> Valida imediatamente</span>
+        <span><i class="fa-solid fa-mobile-screen-button" style="color:#c62828"></i> <strong style="color:var(--text2)">Digital:</strong> Aguarda validação do gestor</span>
+        <span><i class="fa-solid fa-receipt" style="color:var(--accent)"></i> <strong style="color:var(--text2)">Recibo:</strong> Gerado após confirmação</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── RECIBO MODAL ──────────────────────────── -->
+<div id="reciboModal">
+  <div class="recibo-box">
+    <div class="recibo-header">
+      <div class="recibo-logo"><i class="fa-solid fa-receipt"></i></div>
+      <div class="recibo-title">Recibo de Pagamento</div>
+      <div class="recibo-sub" id="recibo-data-hora">—</div>
+    </div>
+    <div class="recibo-body">
+      <div class="recibo-total">
+        <div class="recibo-total-label">Valor Pago</div>
+        <div class="recibo-total-val" id="recibo-valor">—</div>
+        <div id="recibo-status-badge" class="recibo-status imediato" style="margin-top:10px"></div>
+      </div>
+      <div class="recibo-row"><span class="recibo-key">Cliente</span><span class="recibo-val" id="rNome">—</span></div>
+      <div class="recibo-row"><span class="recibo-key">Contrato</span><span class="recibo-val" id="rContrato">—</span></div>
+      <div class="recibo-row"><span class="recibo-key">Método</span><span class="recibo-val" id="rMetodo">—</span></div>
+      <div class="recibo-row"><span class="recibo-key">Tipo</span><span class="recibo-val" id="rTipo">—</span></div>
+      <div class="recibo-row" id="rRefRow" style="display:none"><span class="recibo-key">Referência</span><span class="recibo-val" id="rRef">—</span></div>
+      <div class="recibo-row"><span class="recibo-key">Data</span><span class="recibo-val" id="rData">—</span></div>
+      <div class="recibo-row" id="rSaldoRow"><span class="recibo-key">Saldo após pagamento</span><span class="recibo-val" id="rSaldo">—</span></div>
+    </div>
+    <div class="recibo-footer">
+      <button class="btn btn-secondary" style="flex:1" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> Imprimir
+      </button>
+      <button class="btn btn-primary" style="flex:2" id="btnConfirmarRecibo">
+        <i class="fa-solid fa-paper-plane"></i> Confirmar e Enviar
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+const ehStaff    = {{ eh_staff|yesno:"true,false" }};
+const totalMulta = parseFloat("{{ emp.total_com_multa|floatformat:2 }}") || 0;
+const totalBase  = parseFloat("{{ emp.total_a_pagar|floatformat:2 }}") || 0;
+const nomeCliente  = "{{ emp.nome|escapejs }}";
+const numContrato  = "{{ emp.numero_contrato }}";
+
+const LABELS = {
+  dinheiro:'Dinheiro Físico', transferencia:'Transferência Bancária',
+  mpesa:'M-Pesa', mkesh:'mKesh', emola:'eWallet/Emola', outro:'Outro'
+};
+
+let metodoSel = null;
+let tipoPagSel = 'total';
+
+// ── SELECCIONAR MÉTODO ─────────────────────────
+document.querySelectorAll('.metodo-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.metodo-card').forEach(c => c.classList.remove('sel'));
+    card.classList.add('sel');
+    card.querySelector('input[type=radio]').checked = true;
+    metodoSel = card.dataset.metodo;
+    updateAviso();
+    updateBtn();
+    // Mostrar campos digitais
+    const df = document.getElementById('digitalFields');
+    df.style.display = metodoSel !== 'dinheiro' ? 'block' : 'none';
+    if (metodoSel !== 'dinheiro') df.style.animation = 'fadeUp .2s ease';
+  });
+});
+
+// ── SELECCIONAR TIPO PAGAMENTO ─────────────────
+document.querySelectorAll('.tipo-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.tipo-card').forEach(c => {
+      c.classList.remove('sel-total','sel-parcial');
+    });
+    const val = card.querySelector('input[type=radio]').value;
+    card.querySelector('input[type=radio]').checked = true;
+    tipoPagSel = val;
+    card.classList.add(val === 'total' ? 'sel-total' : 'sel-parcial');
+    document.getElementById('aviso-parcial').style.display = val === 'parcial' ? 'block' : 'none';
+    // Update valor hint
+    const hint = document.getElementById('valorHint');
+    const vi   = document.getElementById('valorInput');
+    if (val === 'total') {
+      vi.value = totalMulta.toFixed(2);
+      hint.textContent = 'Total recomendado: MT ' + totalMulta.toFixed(2);
+      hint.style.color = '';
+    } else {
+      hint.textContent = 'Pode pagar qualquer valor parcial (saldo: MT ' + totalMulta.toFixed(2) + ')';
+      hint.style.color = 'var(--warn)';
+    }
+  });
+});
+
+// ── AVISO ──────────────────────────────────────
+function updateAviso() {
+  const box = document.getElementById('avisoBox');
+  const txt = document.getElementById('avisoTxt');
+  if (!metodoSel) { box.className = 'aviso-box'; return; }
+  box.className = 'aviso-box show ' + (metodoSel === 'dinheiro' ? 'aviso-ok' : 'aviso-pend');
+  txt.innerHTML = metodoSel === 'dinheiro'
+    ? '<strong>Dinheiro Físico:</strong> Pagamento aplicado <strong>imediatamente</strong> ao empréstimo. Recibo gerado automaticamente.'
+    : `<strong>${LABELS[metodoSel]}:</strong> Lançamento submetido. O gestor irá verificar e validar. Inclua sempre a referência da transacção.`;
+}
+
+function updateBtn() {
+  const t = document.getElementById('btnText');
+  if (!metodoSel) return;
+  t.textContent = metodoSel === 'dinheiro' ? 'Aplicar Pagamento' : 'Submeter para Validação';
+}
+
+// ── VALOR INPUT ────────────────────────────────
+document.getElementById('valorInput').addEventListener('input', function() {
+  const val  = parseFloat(this.value) || 0;
+  const hint = document.getElementById('valorHint');
+  if (val > 0 && Math.abs(val - totalMulta) > 0.01 && tipoPagSel === 'total') {
+    hint.style.color = 'var(--warn)';
+    hint.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Valor diferente do total (MT ${totalMulta.toFixed(2)})`;
+  } else if (tipoPagSel === 'parcial') {
+    hint.textContent = 'Saldo após pagamento: MT ' + Math.max(0, totalMulta - val).toFixed(2);
+    hint.style.color = 'var(--accent)';
+  } else {
+    hint.style.color = '';
+    hint.textContent = 'Total recomendado: MT ' + totalMulta.toFixed(2);
+  }
+});
+
+// ── RECIBO PREVIEW ─────────────────────────────
+function previewRecibo() {
+  const valor  = parseFloat(document.getElementById('valorInput').value) || 0;
+  const data   = document.getElementById('dataInput').value;
+  const ref    = document.getElementById('refInput')?.value || '';
+  const tipo   = tipoPagSel;
+
+  const agora  = new Date();
+  document.getElementById('recibo-data-hora').textContent =
+    agora.toLocaleDateString('pt-MZ', {day:'2-digit',month:'2-digit',year:'numeric'}) +
+    ' ' + agora.toLocaleTimeString('pt-MZ',{hour:'2-digit',minute:'2-digit'});
+
+  document.getElementById('recibo-valor').textContent = 'MT ' + valor.toLocaleString('pt-MZ',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('rNome').textContent     = nomeCliente;
+  document.getElementById('rContrato').textContent = numContrato;
+  document.getElementById('rMetodo').textContent   = LABELS[metodoSel] || metodoSel;
+  document.getElementById('rTipo').textContent     = tipo === 'total' ? 'Pagamento Total' : 'Pagamento Parcial';
+  document.getElementById('rData').textContent     = data ? new Date(data+'T12:00:00').toLocaleDateString('pt-MZ',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+
+  const refRow = document.getElementById('rRefRow');
+  if (ref) { refRow.style.display = 'flex'; document.getElementById('rRef').textContent = ref; }
+  else      { refRow.style.display = 'none'; }
+
+  const saldoRow = document.getElementById('rSaldoRow');
+  if (tipo === 'parcial') {
+    saldoRow.style.display = 'flex';
+    document.getElementById('rSaldo').textContent = 'MT ' + Math.max(0, totalMulta - valor).toLocaleString('pt-MZ',{minimumFractionDigits:2,maximumFractionDigits:2});
+  } else {
+    document.getElementById('rSaldo').textContent = 'MT 0,00';
+  }
+
+  const badge = document.getElementById('recibo-status-badge');
+  if (metodoSel === 'dinheiro') {
+    badge.className = 'recibo-status imediato';
+    badge.innerHTML = '<i class="fa-solid fa-check-circle"></i> Aplicado Imediatamente';
+  } else {
+    badge.className = 'recibo-status pendente';
+    badge.innerHTML = '<i class="fa-solid fa-clock"></i> Aguarda Validação do Gestor';
+  }
+
+  document.getElementById('reciboModal').classList.add('show');
+}
+
+// ── SUBMIT ─────────────────────────────────────
+document.getElementById('lancForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  if (!metodoSel) { alert('Seleccione o método de pagamento.'); return; }
+  const valor = parseFloat(document.getElementById('valorInput').value) || 0;
+  if (valor <= 0) { alert('Valor inválido.'); return; }
+  previewRecibo();
+});
+
+// ── CONFIRMAR DO RECIBO ────────────────────────
+document.getElementById('btnConfirmarRecibo').addEventListener('click', function() {
+  document.getElementById('reciboModal').classList.remove('show');
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-rotate" style="animation:spin 1s linear infinite"></i> A processar...';
+  document.getElementById('lancForm').submit();
+});
+
+// ── FECHAR RECIBO COM ESC ──────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('reciboModal').classList.remove('show');
+});
+document.getElementById('reciboModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('show');
+});
+
+// ── INIT ───────────────────────────────────────
+(function init() {
+  // Auto-select método padrão
+  const defaultMetodo = ehStaff ? 'dinheiro' : 'transferencia';
+  const defCard = document.querySelector(`.metodo-card[data-metodo="${defaultMetodo}"]`);
+  if (defCard) defCard.click();
+
+  // Init tipo total
+  document.getElementById('tc-total').classList.add('sel-total');
+  tipoPagSel = 'total';
+})();
+</script>
+
+{% endblock %}
+
+

@@ -1,0 +1,132 @@
+{% extends "osm/base.html" %}
+{% block title %}Solicitações Públicas — OSM{% endblock %}
+{% block nav_solicitacoes %}active{% endblock %}
+{% block topbar_title %}Solicitações Públicas{% endblock %}
+{% block topbar_sub %}Pedidos recebidos via landing page{% endblock %}
+
+{% block content %}
+<!-- KPI Strip -->
+<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-solid fa-inbox"></i> Novas</div>
+    <div class="kpi-value" style="color:var(--warn)">{{ total_subm }}</div>
+    <div class="kpi-sub">Aguardam análise</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-solid fa-magnifying-glass"></i> Em Análise</div>
+    <div class="kpi-value" style="color:var(--accent)">{{ total_analise }}</div>
+    <div class="kpi-sub">A ser avaliadas</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-solid fa-circle-check"></i> Aprovadas</div>
+    <div class="kpi-value" style="color:var(--success)">{{ solicitacoes|length }}</div>
+    <div class="kpi-sub">Total registado</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-solid fa-file-pen"></i> Total</div>
+    <div class="kpi-value">{{ solicitacoes|length }}</div>
+    <div class="kpi-sub">Todas as solicitações</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-file-pen" style="color:var(--gold)"></i> Solicitações</div>
+    <!-- Filtros de status -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <a href="{% url 'solicitacoes_lista' %}"
+         class="btn btn-sm {% if not status_filtro %}btn-primary{% else %}btn-secondary{% endif %}">
+        Todas
+      </a>
+      <a href="?status=submetido"
+         class="btn btn-sm {% if status_filtro == 'submetido' %}btn-primary{% else %}btn-secondary{% endif %}">
+        <i class="fa-solid fa-inbox"></i> Novas
+      </a>
+      <a href="?status=em_analise"
+         class="btn btn-sm {% if status_filtro == 'em_analise' %}btn-primary{% else %}btn-secondary{% endif %}">
+        <i class="fa-solid fa-magnifying-glass"></i> Em Análise
+      </a>
+      <a href="?status=aprovado"
+         class="btn btn-sm {% if status_filtro == 'aprovado' %}btn-success{% else %}btn-secondary{% endif %}">
+        <i class="fa-solid fa-check"></i> Aprovadas
+      </a>
+      <a href="?status=rejeitado"
+         class="btn btn-sm {% if status_filtro == 'rejeitado' %}btn-danger{% else %}btn-secondary{% endif %}">
+        <i class="fa-solid fa-xmark"></i> Rejeitadas
+      </a>
+    </div>
+  </div>
+  <div class="table-wrap">
+    {% if solicitacoes %}
+    <table>
+      <thead>
+        <tr>
+          <th><i class="fa-solid fa-calendar"></i> Data</th>
+          <th><i class="fa-solid fa-user"></i> Solicitante</th>
+          <th><i class="fa-solid fa-phone"></i> Contacto</th>
+          <th><i class="fa-solid fa-coins"></i> Valor</th>
+          <th><i class="fa-solid fa-bullseye"></i> Finalidade</th>
+          <th><i class="fa-solid fa-file-pdf"></i> Doc</th>
+          <th><i class="fa-solid fa-circle-dot"></i> Estado</th>
+          <th>Acções</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sol in solicitacoes %}
+        <tr>
+          <td style="white-space:nowrap">
+            <div>{{ sol.data_submissao|date:"d/m/Y" }}</div>
+            <div class="td-sub">{{ sol.data_submissao|date:"H:i" }}</div>
+          </td>
+          <td>
+            <div class="td-primary">{{ sol.nome_completo }}</div>
+            <div class="td-sub">{{ sol.email|default:"" }}</div>
+          </td>
+          <td class="td-mono">{{ sol.telefone }}</td>
+          <td class="td-mono" style="color:var(--gold);font-weight:700">
+            MT {{ sol.valor_pedido|floatformat:0 }}
+          </td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ sol.finalidade }}
+          </td>
+          <td>
+            {% if sol.documento_pdf %}
+            <a href="{{ sol.documento_pdf.url }}" target="_blank" class="btn btn-sm btn-secondary">
+              <i class="fa-solid fa-file-pdf" style="color:#e53935"></i>
+            </a>
+            {% else %}
+            <span style="color:var(--text3);font-size:12px">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if sol.status == 'submetido' %}
+              <span class="badge badge-pendente"><i class="fa-solid fa-inbox"></i> Novo</span>
+            {% elif sol.status == 'em_analise' %}
+              <span class="badge" style="background:rgba(21,101,192,.1);color:var(--accent)">
+                <i class="fa-solid fa-magnifying-glass"></i> Em Análise
+              </span>
+            {% elif sol.status == 'aprovado' %}
+              <span class="badge badge-ativo"><i class="fa-solid fa-check"></i> Aprovado</span>
+            {% else %}
+              <span class="badge badge-rejeitado"><i class="fa-solid fa-xmark"></i> Rejeitado</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'solicitacao_detalhe' sol.pk %}" class="btn btn-sm btn-secondary">
+              <i class="fa-solid fa-eye"></i> Ver
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="padding:48px;text-align:center;color:var(--text3)">
+      <i class="fa-solid fa-file-pen" style="font-size:40px;margin-bottom:14px;display:block;color:var(--border)"></i>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">Nenhuma solicitação encontrada</div>
+      <div style="font-size:13px">As solicitações recebidas via landing page aparecerão aqui.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

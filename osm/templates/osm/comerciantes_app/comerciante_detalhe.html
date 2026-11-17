@@ -1,0 +1,673 @@
+{% extends "osm/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ com.nome }} — OSM{% endblock %}
+{% block nav_comerciantes %}active{% endblock %}
+{% block topbar_title %}{{ com.nome }}{% endblock %}
+{% block topbar_sub %}
+  {{ com.numero_contrato }}
+  <span class="badge" style="font-size:10px;margin-left:4px;background:rgba(201,168,76,.1);color:var(--gold-d)">
+    <i class="fa-solid fa-{% if com.modalidade_pagamento == 'semanal' %}calendar-week{% else %}calendar-day{% endif %}"></i>
+    {{ com.modalidade_pagamento|capfirst }}
+  </span>
+  · {{ com.tipo_comercio }}
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'creditos_comerciante' com.pk %}" class="btn btn-dark btn-sm">← Voltar</a>
+<a href="{% url 'comerciante_editar' com.pk %}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen"></i> Editar</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── TABS DE CRÉDITO ─────────────────────────────────────── */
+.cred-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 14px 16px 0;
+}
+.cred-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
+  border-radius: 10px 10px 0 0;
+  border: 2px solid var(--border);
+  border-bottom: none;
+  background: var(--surface2);
+  cursor: pointer;
+  font-size: 12px; font-weight: 600;
+  color: var(--text3);
+  transition: all .15s ease;
+  position: relative; bottom: -1px;
+}
+.cred-tab:hover { color: var(--text); background: var(--surface); }
+.cred-tab.active {
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-bottom-color: var(--surface);
+}
+.cred-tab .cred-tab-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800;
+  flex-shrink: 0;
+}
+.cred-tab.active .cred-tab-num {
+  background: var(--accent);
+  color: white;
+}
+.cred-tab .cred-tab-status {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── PAINEL DO CRÉDITO ──────────────────────────────────── */
+.cred-painel { display: none; }
+.cred-painel.active { display: block; }
+
+/* ── CALENDÁRIO ─────────────────────────────────────────── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.cal-day {
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  width: 100%; text-align: left;
+  cursor: pointer;
+  transition: all .18s ease;
+  font-size: 11px;
+}
+.cal-day.pago {
+  background: #2e7d32; border-color: #2e7d32; color: white;
+}
+.cal-day.hoje {
+  border-color: var(--warn); background: rgba(230,81,0,.06);
+}
+.cal-day.atraso {
+  border-color: var(--danger); background: rgba(198,40,40,.05);
+}
+.cal-day:hover:not(.pago) { border-color: var(--accent); background: var(--accent-l); }
+.cal-day-num { color: var(--text3); margin-bottom: 3px; font-size: 10px; }
+.cal-day.pago .cal-day-num { color: rgba(255,255,255,.75); }
+.cal-day-label { font-weight: 700; }
+.cal-day.pago .cal-day-label { color: white; }
+.cal-day.hoje .cal-day-label { color: var(--warn); }
+.cal-day.atraso .cal-day-label { color: var(--danger); }
+
+/* ── LIGHTBOX ────────────────────────────────────────────── */
+#lb { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999;
+      align-items:center; justify-content:center; flex-direction:column; }
+#lb.open { display:flex; }
+#lb img { max-width:88vw; max-height:84vh; border-radius:10px; object-fit:contain; }
+#lb-close { position:fixed; top:20px; right:24px; color:white; font-size:30px; cursor:pointer;
+             background:rgba(255,255,255,.15); border:none; border-radius:50%;
+             width:42px; height:42px; display:flex; align-items:center; justify-content:center; }
+#lb-caption { color:rgba(255,255,255,.65); font-size:12px; margin-top:10px; }
+#lb-nav { position:fixed; bottom:24px; display:flex; gap:10px; }
+#lb-nav button { background:rgba(255,255,255,.15); border:none; color:white;
+                  padding:8px 18px; border-radius:20px; font-size:13px; cursor:pointer; }
+.img-thumb { width:88px; height:88px; object-fit:cover; border-radius:9px;
+             border:2px solid var(--border); cursor:pointer; transition:all .2s; }
+.img-thumb:hover { border-color:var(--accent); transform:scale(1.06); }
+
+/* ── MODAL CALENDÁRIO ────────────────────────────────────── */
+#modal-cal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
+             z-index:1000; align-items:center; justify-content:center; }
+#modal-cal.open { display:flex; }
+#modal-cal-inner { background:var(--surface); border-radius:16px; max-width:480px;
+                   width:90%; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.25); }
+
+/* ── HTMX ───────────────────────────────────────────────── */
+.htmx-indicator { display:none; }
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator { display:inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── STATUS BADGE TOPO ── #}
+<div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+  {% with s=com.status %}
+    {% if s == 'quitado' %}
+      <span class="badge bg-success" style="font-size:13px;padding:7px 14px"><i class="fa-solid fa-circle-check"></i> Quitado</span>
+    {% elif s == 'incumprimento' %}
+      <span class="badge bg-dark" style="font-size:13px;padding:7px 14px"><i class="fa-solid fa-scale-balanced"></i> Tribunal</span>
+    {% elif s == 'atraso' %}
+      <span class="badge bg-warning text-dark" style="font-size:13px;padding:7px 14px"><i class="fa-solid fa-triangle-exclamation"></i> Em Atraso</span>
+    {% else %}
+      <span class="badge bg-warning text-dark" style="font-size:13px;padding:7px 14px"><i class="fa-solid fa-hourglass-half"></i> Pagamento em Andamento</span>
+    {% endif %}
+    <div style="flex:1;min-width:160px">
+      <div style="height:8px;background:var(--border);border-radius:20px;overflow:hidden">
+        <div style="height:100%;width:{{ com.progresso }}%;border-radius:20px;transition:width .4s;background:{% if com.status == 'quitado' %}#2e7d32{% elif com.status == 'atraso' or com.status == 'incumprimento' %}#c62828{% else %}var(--accent){% endif %}"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">
+        {{ com.periodos_pagos }}/{{ com.total_periodos }} {% if com.modalidade_pagamento == 'semanal' %}semanas{% else %}dias{% endif %} · {{ com.progresso }}%
+      </div>
+    </div>
+  {% endwith %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+
+{# ═══════ COLUNA PRINCIPAL ═══════ #}
+<div>
+
+  {# ── PAINEL DE PAGAMENTO (próxima parcela / pago hoje / quitado) ── #}
+  <div class="card">
+    <div class="card-body">
+
+      {% if com.status == 'quitado' %}
+      <div style="text-align:center;padding:28px;background:rgba(46,125,50,.08);border-radius:12px;border:1px solid rgba(46,125,50,.2)">
+        <div style="font-size:40px;margin-bottom:8px"><i class="fa-solid fa-trophy" style="color:var(--success)"></i></div>
+        <div style="font-size:18px;font-weight:700;color:var(--success)">Contrato Quitado!</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:4px">Todas as {{ com.prazo_dias }} parcelas foram pagas.</div>
+      </div>
+
+      {% elif com.pagou_hoje %}
+      <div style="background:rgba(46,125,50,.08);border:1px solid rgba(46,125,50,.2);border-radius:12px;padding:18px;text-align:center;margin-bottom:12px">
+        <div style="font-size:26px;margin-bottom:6px"><i class="fa-solid fa-check-circle" style="color:var(--success)"></i></div>
+        <div style="font-size:15px;font-weight:700;color:var(--success)">Pagamento de hoje confirmado</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">
+          {{ com.periodos_pagos }}/{{ com.total_periodos }} · MT {{ com.parcela_atual|floatformat:2 }}
+        </div>
+      </div>
+      <form method="post" action="{% url 'cancelar_pagamento' com.pk %}" id="form-anular">
+        {% csrf_token %}
+        <button type="button" class="btn btn-danger btn-full" id="btn-anular" onclick="confirmAnular()">
+          <span id="anular-text"><i class="fa-solid fa-xmark"></i> Anular Pagamento de Hoje</span>
+          <span id="anular-spinner" style="display:none"><span class="btn-spin"></span> A anular…</span>
+        </button>
+      </form>
+
+      {% else %}
+        {% if proximo_nao_pago %}
+          {% with periodo_num=proximo_nao_pago.0 data_proximo=proximo_nao_pago.1 %}
+          <div style="background:rgba(230,81,0,.06);border:1px solid rgba(230,81,0,.2);border-radius:12px;padding:16px;text-align:center;margin-bottom:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
+              Próxima parcela — {{ data_proximo|date:"d/m/Y" }}
+            </div>
+            <div style="font-family:var(--ff-mono);font-size:34px;font-weight:800;color:var(--warn)">
+              MT {{ com.parcela_atual|floatformat:2 }}
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">
+              Período {{ periodo_num }}/{{ com.total_periodos }}
+            </div>
+          </div>
+          <form method="post" action="{% url 'confirmar_pagamento' com.pk %}" id="form-confirmar">
+            {% csrf_token %}
+            <input type="hidden" name="data" id="data-prox" value="{{ data_proximo|date:'Y-m-d' }}">
+            <button type="button" class="btn btn-success btn-full btn-lg" id="btn-confirmar" onclick="confirmPagamento()">
+              <span id="confirmar-text"><i class="fa-solid fa-check"></i> Confirmar Pagamento — MT {{ com.parcela_atual|floatformat:2 }}</span>
+              <span id="confirmar-spinner" style="display:none"><span class="btn-spin"></span> A confirmar…</span>
+            </button>
+          </form>
+          {% endwith %}
+        {% else %}
+          <div style="text-align:center;padding:24px;background:rgba(46,125,50,.08);border-radius:12px">
+            <i class="fa-solid fa-trophy" style="color:var(--success)"></i> Todos os períodos estão pagos!
+          </div>
+        {% endif %}
+      {% endif %}
+
+      {# Barra de progresso inline #}
+      <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">
+          <span>{{ com.periodos_pagos }} {% if com.modalidade_pagamento == 'semanal' %}sem.{% else %}dias{% endif %} pagos</span>
+          <span>{{ com.total_periodos }} total · <strong style="color:var(--text)">{{ com.progresso }}%</strong></span>
+        </div>
+        <div style="height:8px;background:var(--border);border-radius:20px;overflow:hidden">
+          <div style="height:100%;width:{{ com.progresso }}%;border-radius:20px;transition:width .4s;background:{% if com.status == 'quitado' %}#2e7d32{% elif com.status == 'atraso' or com.status == 'incumprimento' %}#c62828{% else %}var(--accent){% endif %}"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── CALENDÁRIO DE PAGAMENTOS ── #}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-calendar-alt"></i> Calendário de Pagamentos</div>
+      <span style="font-size:12px;color:var(--text3)">Clique num dia para registar pagamento</span>
+    </div>
+    <div class="card-body" style="padding:12px">
+      <div class="cal-grid">
+        {% for num, dt, pago, eh_hoje in calendario %}
+        {% with atrasado=dt|date:'Y-m-d' %}
+        <button class="cal-day {% if pago %}pago{% elif eh_hoje %}hoje{% elif dt < hoje %}atraso{% endif %}"
+                data-date="{{ dt|date:'Y-m-d' }}"
+                data-pago="{{ pago|yesno:'1,0' }}"
+                onclick="calDayClick(this)">
+          <div class="cal-day-num">{{ dt|date:"d M" }} · Dia {{ num }}</div>
+          <div class="cal-day-label">
+            {% if pago %}<i class="fa-solid fa-check-circle"></i> Pago
+            {% elif eh_hoje %}<i class="fa-solid fa-circle"></i> Hoje
+            {% elif dt < hoje %}<i class="fa-solid fa-clock"></i> Atraso
+            {% else %}<i class="fa-regular fa-circle"></i> Pendente{% endif %}
+          </div>
+        </button>
+        {% endwith %}
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--text3)">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#2e7d32;border-radius:3px;margin-right:4px"></span>Pago</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(230,81,0,.3);border-radius:3px;border:1px solid var(--warn);margin-right:4px"></span>Hoje</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:rgba(198,40,40,.15);border-radius:3px;border:1px solid var(--danger);margin-right:4px"></span>Em Atraso</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--border);border-radius:3px;margin-right:4px"></span>Pendente</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── CRÉDITOS VINCULADOS (HTMX) ── #}
+  <div class="card">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="card-title"><i class="fa-solid fa-coins" style="color:var(--accent)"></i> Créditos Vinculados</div>
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'adicionar_credito_comerciante_form' com.pk %}"
+              hx-target="#creditos-container-comerciante"
+              hx-swap="innerHTML"
+              hx-indicator="#spinner-cred">
+        <i class="fa-solid fa-plus"></i> Novo Crédito
+        <span id="spinner-cred" class="htmx-indicator" style="display:none"><span class="btn-spin"></span></span>
+      </button>
+    </div>
+    <div class="card-body" id="creditos-container-comerciante">
+      {% include "osm/includes/creditos_lista_comerciante.html" with creditos_activos=creditos_activos creditos_quitados=creditos_quitados com=com %}
+    </div>
+  </div>
+
+  {# ── RECIBOS ── #}
+  {% if recibos %}
+  <div class="card">
+    <div class="card-header"><div class="card-title"><i class="fa-solid fa-receipt"></i> Recibos</div></div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);background:var(--surface2)">
+            <th style="padding:10px 12px;text-align:left;font-size:12px">Data</th>
+            <th style="padding:10px 12px;text-align:right;font-size:12px">Valor</th>
+            <th style="padding:10px 12px;text-align:center;font-size:12px">PDF</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pag in recibos %}
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px 12px;font-size:13px">{{ pag.data|date:"d/m/Y" }}</td>
+            <td style="padding:10px 12px;text-align:right;font-family:monospace;font-size:13px">MT {{ pag.valor_pago|floatformat:2 }}</td>
+            <td style="padding:10px 12px;text-align:center">
+              <a href="{% url 'recibo_comerciante_pdf' pk=com.pk pagamento_pk=pag.pk %}" target="_blank"
+                 class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11px">
+                <i class="fa-solid fa-download"></i> PDF
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>{# /coluna principal #}
+
+{# ═══════ COLUNA LATERAL ═══════ #}
+<div>
+
+  {# ── SELECTOR DE CRÉDITO + PAINEL FINANCEIRO ── #}
+  <div class="card" style="position:sticky;top:80px">
+
+    {# Tabs apenas se houver 2+ créditos #}
+    {% if creditos_activos|length > 1 %}
+    <div class="cred-tabs">
+      {% for cred in creditos_activos %}
+      <button class="cred-tab {% if forloop.counter0 == credito_sel_idx %}active{% endif %}"
+              id="tab-{{ forloop.counter0 }}"
+              onclick="selectCred({{ forloop.counter0 }}, this)"
+              data-cred-id="{{ cred.pk }}"
+              title="MT {{ cred.valor|floatformat:0 }} · {% if cred.esta_vencido %}Vencido{% elif cred.em_incumprimento %}Tribunal{% else %}Activo{% endif %}">
+        <span class="cred-tab-num">{{ forloop.counter }}</span>
+        <span>MT {{ cred.valor|floatformat:0 }}</span>
+        <span class="cred-tab-status" style="background:{% if cred.em_incumprimento %}var(--danger){% elif cred.esta_vencido %}var(--warn){% else %}var(--success){% endif %}"></span>
+      </button>
+      {% endfor %}
+    </div>
+    <div style="height:1px;background:var(--border);margin:0 16px"></div>
+    {% else %}
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-coins"></i> Financeiro</div>
+    </div>
+    {% endif %}
+
+    {# Painel por crédito #}
+    {% for cred in creditos_activos %}
+    <div class="cred-painel {% if forloop.counter0 == credito_sel_idx %}active{% endif %}" id="painel-{{ forloop.counter0 }}">
+      <div class="card-body" style="padding-top:{% if creditos_activos|length > 1 %}14px{% else %}0{% endif %}">
+
+        {% if creditos_activos|length > 1 %}
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">
+          Crédito {{ forloop.counter }} de {{ creditos_activos|length }}
+        </div>
+        {% endif %}
+
+        <div class="detail-row"><span class="detail-key">Capital</span><span class="detail-val td-mono">{{ cred.valor|floatformat:2 }} MT</span></div>
+        <div class="detail-row"><span class="detail-key">Juros ({{ cred.taxa_juros }}%)</span><span class="detail-val td-mono" style="color:var(--warn)">{{ cred.juros_valor|floatformat:2 }} MT</span></div>
+        <div class="detail-row"><span class="detail-key">Total a Pagar</span><span class="detail-val td-mono" style="font-weight:700">{{ cred.total_a_pagar|floatformat:2 }} MT</span></div>
+        <div class="detail-row"><span class="detail-key">Parcela/{{ com.modalidade_pagamento|slice:":3" }}</span>
+          <span class="detail-val td-mono" style="color:var(--accent);font-size:16px;font-weight:800">{{ com.parcela_atual|floatformat:2 }} MT</span>
+        </div>
+        <div class="detail-row"><span class="detail-key">Total Pago</span><span class="detail-val td-mono" style="color:var(--success)">{{ com.total_pago|floatformat:2 }} MT</span></div>
+
+        {# Barra de progresso do crédito #}
+        <div style="margin:10px 0">
+          <div style="height:6px;background:var(--border);border-radius:20px;overflow:hidden">
+            <div style="height:100%;width:{{ cred.percentual_pago }}%;background:{% if cred.em_incumprimento %}var(--danger){% elif cred.esta_vencido %}var(--warn){% else %}var(--success){% endif %};border-radius:20px"></div>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">{{ cred.percentual_pago }}% pago</div>
+        </div>
+
+        {% if cred.mora_composta > 0 %}
+        <div style="height:1px;background:var(--border);margin:8px 0"></div>
+        <div class="detail-row"><span class="detail-key" style="color:var(--danger)">Multa acumulada</span>
+          <span class="detail-val td-mono" style="color:var(--danger);font-weight:700">{{ cred.mora_composta|floatformat:2 }} MT</span>
+        </div>
+        <div class="detail-row" style="border:none">
+          <span class="detail-key" style="color:var(--danger);font-weight:700">TOTAL C/ MULTA</span>
+          <span class="detail-val td-mono" style="color:var(--danger);font-size:17px;font-weight:700">{{ cred.total_com_multa|floatformat:2 }} MT</span>
+        </div>
+        {% else %}
+        <div class="detail-row" style="border:none">
+          <span class="detail-key" style="font-weight:700">Restante</span>
+          <span class="detail-val td-mono" style="color:var(--danger);font-size:17px;font-weight:700">{{ com.total_restante|floatformat:2 }} MT</span>
+        </div>
+        {% endif %}
+
+        {# Botão de lançar pagamento para ESTE crédito (só se tiver 2+) #}
+        {% if creditos_activos|length > 1 %}
+        <div style="margin-top:12px">
+          <form method="post" action="{% url 'confirmar_pagamento' com.pk %}" id="form-cred-{{ forloop.counter0 }}">
+            {% csrf_token %}
+            <input type="hidden" name="data" value="{{ data_proximo_str|default:'' }}">
+            <input type="hidden" name="credito_id" value="{{ cred.pk }}">
+            <button type="button" class="btn btn-success btn-full btn-sm"
+                    onclick="confirmLancarCred({{ forloop.counter0 }}, 'MT {{ cred.valor|floatformat:2 }}')">
+              <i class="fa-solid fa-money-bill-wave"></i> Pagar Crédito {{ forloop.counter }}
+            </button>
+          </form>
+        </div>
+        {% endif %}
+
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">
+          Início: {{ cred.data_inicio|date:"d/m/Y" }} · Vence: {{ cred.vencimento|date:"d/m/Y" }}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    {# Sem créditos registados #}
+    <div class="card-body">
+      <div class="detail-row"><span class="detail-key">Capital</span><span class="detail-val td-mono">{{ com.capital|floatformat:2 }} MT</span></div>
+      <div class="detail-row"><span class="detail-key">Total a Pagar</span><span class="detail-val td-mono">{{ com.total_a_pagar|floatformat:2 }} MT</span></div>
+      <div class="detail-row"><span class="detail-key">Parcela/{{ com.modalidade_pagamento|slice:":3" }}</span>
+        <span class="detail-val td-mono" style="color:var(--accent);font-size:16px;font-weight:800">{{ com.parcela_atual|floatformat:2 }} MT</span>
+      </div>
+      <div class="detail-row"><span class="detail-key">Total Pago</span><span class="detail-val td-mono" style="color:var(--success)">{{ com.total_pago|floatformat:2 }} MT</span></div>
+      <div class="detail-row" style="border:none">
+        <span class="detail-key" style="font-weight:700">Restante</span>
+        <span class="detail-val td-mono" style="color:var(--danger);font-size:17px;font-weight:700">{{ com.total_restante|floatformat:2 }} MT</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── DADOS DO COMERCIANTE ── #}
+  <div class="card">
+    <div class="card-header"><div class="card-title"><i class="fa-solid fa-clipboard-list"></i> Dados</div></div>
+    <div class="card-body">
+      <div class="detail-row"><span class="detail-key">Tipo</span><span class="detail-val">{{ com.tipo_comercio }}</span></div>
+      <div class="detail-row"><span class="detail-key">Telefone</span><span class="detail-val">{{ com.telefone|default:"—" }}</span></div>
+      <div class="detail-row"><span class="detail-key">NUIT</span><span class="detail-val td-mono">{{ com.nuit|default:"—" }}</span></div>
+      <div class="detail-row"><span class="detail-key">BI</span><span class="detail-val td-mono">{{ com.bi|default:"—" }}</span></div>
+      <div class="detail-row"><span class="detail-key">Bairro</span><span class="detail-val">{{ com.bairro|default:"—" }}</span></div>
+      <div class="detail-row"><span class="detail-key">Garantia</span><span class="detail-val" style="font-size:12px;text-align:right">{{ com.garantia|default:"—" }}</span></div>
+      <div class="detail-row" style="border:none"><span class="detail-key">Início</span><span class="detail-val">{{ com.data_inicio|date:"d/m/Y" }}</span></div>
+    </div>
+  </div>
+
+</div>{# /lateral #}
+</div>{# /grid #}
+
+{# ── MODAL CALENDÁRIO ── #}
+<div id="modal-cal" onclick="if(event.target===this)fecharModalCal()">
+  <div id="modal-cal-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)">
+      <h3 style="margin:0;font-size:15px"><i class="fa-solid fa-calendar-check" style="color:var(--success)"></i> Registar Pagamento</h3>
+      <button onclick="fecharModalCal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3)">&times;</button>
+    </div>
+    <div id="modal-cal-body" style="padding:20px"></div>
+  </div>
+</div>
+
+{# ── LIGHTBOX ── #}
+<div id="lb" onclick="if(event.target===this)fecharLb()">
+  <button id="lb-close" onclick="fecharLb()">&times;</button>
+  <img id="lb-img" src="" alt="">
+  <div id="lb-caption"></div>
+  <div id="lb-nav">
+    <button onclick="navLb(-1)"><i class="fa-solid fa-chevron-left"></i> Ant.</button>
+    <button onclick="navLb(1)">Próx. <i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+</div>
+
+<script>
+// ─── SELECTOR DE CRÉDITO ────────────────────────────
+function selectCred(idx, btn) {
+  document.querySelectorAll('.cred-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.cred-painel').forEach(p => p.classList.remove('active'));
+  const p = document.getElementById('painel-' + idx);
+  if (p) p.classList.add('active');
+  // Actualizar credito_id no form de confirmar pagamento
+  const credIds = btn.closest('.cred-tabs') ?
+    Array.from(document.querySelectorAll('.cred-tab')).map(t => t.dataset.credId) : [];
+  const credId = btn.dataset.credId;
+  if (credId) {
+    document.querySelectorAll('input[name="credito_id"]').forEach(i => i.value = credId);
+  }
+}
+
+// ─── CALENDÁRIO CLICK ──────────────────────────────
+function calDayClick(btn) {
+  const date = btn.dataset.date;
+  const pago = btn.dataset.pago === '1';
+  if (pago) {
+    Swal.fire({
+      title: 'Já Pago',
+      html: `O período de <strong>${date.split('-').reverse().join('/')}</strong> já foi pago.<br>
+             <a href="#" onclick="anularData('${date}');Swal.close()" style="color:var(--danger);font-size:13px;margin-top:8px;display:inline-block">
+               <i class='fa-solid fa-xmark'></i> Anular este pagamento
+             </a>`,
+      icon: 'info',
+      confirmButtonText: 'OK',
+    });
+    return;
+  }
+  // Carregar parcela via API
+  const url = `/api/comerciante/{{ com.pk }}/parcela/?data=${date}`;
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      const multaHtml = data.multa > 0
+        ? `<div style="padding:10px;background:rgba(198,40,40,.07);border-radius:8px;margin:8px 0;font-size:13px;color:var(--danger)">
+             <i class="fa-solid fa-triangle-exclamation"></i> Multa: <strong>MT ${data.multa.toFixed(2)}</strong>
+           </div>` : '';
+      document.getElementById('modal-cal-body').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:10px;color:var(--text3)">Data</div>
+            <div style="font-weight:700;font-size:14px">${date.split('-').reverse().join('/')}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+            <div style="font-size:10px;color:var(--text3)">Período</div>
+            <div style="font-weight:700;font-size:14px">${data.numero_periodo}/{{ com.total_periodos }}</div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-bottom:10px">
+          <div style="font-size:10px;color:var(--text3)">Valor da Parcela</div>
+          <div style="font-family:monospace;font-size:28px;font-weight:800;color:var(--warn)">MT ${data.valor_parcela.toFixed(2)}</div>
+        </div>
+        ${multaHtml}
+        <div style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">
+          Total a cobrar: <strong>MT ${data.valor_total.toFixed(2)}</strong>
+        </div>
+        <form method="post" action="{% url 'confirmar_pagamento' com.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="data" value="${date}">
+          <button type="submit" class="btn btn-success btn-full btn-lg">
+            <i class="fa-solid fa-check"></i> Confirmar — MT ${data.valor_total.toFixed(2)}
+          </button>
+        </form>
+        <button type="button" class="btn btn-secondary btn-full" style="margin-top:8px" onclick="fecharModalCal()">Cancelar</button>
+      `;
+      document.getElementById('modal-cal').classList.add('open');
+    })
+    .catch(() => {
+      // Fallback sem API
+      document.getElementById('modal-cal-body').innerHTML = `
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:28px;font-weight:800;color:var(--warn);font-family:monospace">MT {{ com.parcela_atual|floatformat:2 }}</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px">Pagamento para ${date.split('-').reverse().join('/')}</div>
+        </div>
+        <form method="post" action="{% url 'confirmar_pagamento' com.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="data" value="${date}">
+          <button type="submit" class="btn btn-success btn-full btn-lg">
+            <i class="fa-solid fa-check"></i> Confirmar Pagamento
+          </button>
+        </form>
+        <button type="button" class="btn btn-secondary btn-full" style="margin-top:8px" onclick="fecharModalCal()">Cancelar</button>
+      `;
+      document.getElementById('modal-cal').classList.add('open');
+    });
+}
+
+function fecharModalCal() {
+  document.getElementById('modal-cal').classList.remove('open');
+}
+
+// ─── ANULAR DATA ────────────────────────────────────
+function anularData(date) {
+  Swal.fire({
+    title: 'Anular Pagamento?',
+    html: `Anular o pagamento de <strong>${date.split('-').reverse().join('/')}</strong>?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Anular',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#c62828',
+  }).then(r => {
+    if (!r.isConfirmed) return;
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '{% url "anular_pagamento_data" com.pk %}';
+    form.innerHTML = `{% csrf_token %}<input name="data" value="${date}">`;
+    document.body.appendChild(form);
+    form.submit();
+  });
+}
+
+// ─── CONFIRMAR PAGAMENTO PRINCIPAL ────────────────
+function confirmPagamento() {
+  const dataVal = document.getElementById('data-prox').value;
+  const dataFmt = dataVal ? dataVal.split('-').reverse().join('/') : 'hoje';
+  Swal.fire({
+    title: 'Confirmar Pagamento',
+    html: `Confirmar MT <strong>{{ com.parcela_atual|floatformat:2 }}</strong> para <strong>${dataFmt}</strong>?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '<i class="fa-solid fa-check"></i> Confirmar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#2e7d32',
+  }).then(r => {
+    if (!r.isConfirmed) return;
+    document.getElementById('confirmar-text').style.display = 'none';
+    document.getElementById('confirmar-spinner').style.display = 'inline-flex';
+    document.getElementById('btn-confirmar').disabled = true;
+    document.getElementById('form-confirmar').submit();
+  });
+}
+
+// ─── CONFIRMAR ANULAR ─────────────────────────────
+function confirmAnular() {
+  Swal.fire({
+    title: 'Anular Pagamento?',
+    text: 'Tem a certeza que deseja anular o pagamento de hoje?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Anular',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#c62828',
+  }).then(r => {
+    if (!r.isConfirmed) return;
+    document.getElementById('anular-text').style.display = 'none';
+    document.getElementById('anular-spinner').style.display = 'inline-flex';
+    document.getElementById('btn-anular').disabled = true;
+    document.getElementById('form-anular').submit();
+  });
+}
+
+// ─── LANÇAR CRÉDITO ESPECÍFICO ────────────────────
+function confirmLancarCred(idx, valor) {
+  Swal.fire({
+    title: 'Lançar Pagamento',
+    html: `Confirmar pagamento de <strong>${valor}</strong>?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '<i class="fa-solid fa-check"></i> Confirmar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#2e7d32',
+  }).then(r => {
+    if (r.isConfirmed) document.getElementById('form-cred-' + idx).submit();
+  });
+}
+
+// ─── LIGHTBOX ────────────────────────────────────
+const lbImgs = [];
+let lbIdx = 0;
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.img-thumb').forEach((img, i) => {
+    lbImgs.push({ src: img.src, caption: img.alt || '' });
+    img.addEventListener('click', () => {
+      lbIdx = i;
+      document.getElementById('lb-img').src = img.src;
+      document.getElementById('lb-caption').textContent = img.alt || '';
+      document.getElementById('lb').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+  if (lbImgs.length <= 1) document.getElementById('lb-nav').style.display = 'none';
+});
+function fecharLb() {
+  document.getElementById('lb').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function navLb(dir) {
+  lbIdx = (lbIdx + dir + lbImgs.length) % lbImgs.length;
+  document.getElementById('lb-img').src = lbImgs[lbIdx].src;
+  document.getElementById('lb-caption').textContent = lbImgs[lbIdx].caption;
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lb').classList.contains('open')) return;
+  if (e.key === 'Escape') fecharLb();
+  if (e.key === 'ArrowLeft') navLb(-1);
+  if (e.key === 'ArrowRight') navLb(1);
+});
+</script>
+{% endblock %}

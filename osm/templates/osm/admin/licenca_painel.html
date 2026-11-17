@@ -1,0 +1,342 @@
+{% extends "osm/base.html" %}
+{% block title %}Licença do Sistema — OSM{% endblock %}
+{% block nav_config %}active{% endblock %}
+{% block topbar_title %}Licença do Sistema{% endblock %}
+{% block topbar_sub %}Gestão de activação e renovação{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Estilos existentes da página */
+.lic-hero {
+  background: linear-gradient(135deg, #0a1628 0%, #1e3a5f 100%);
+  border-radius: 18px; padding: 32px; margin-bottom: 24px;
+  position: relative; overflow: hidden; border: none;
+}
+.lic-hero::before {
+  content: ''; position: absolute; top: -60px; right: -60px;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,168,76,.15) 0%, transparent 70%);
+}
+.lic-code {
+  font-family: var(--ff-mono); font-size: 48px; font-weight: 700;
+  color: var(--gold); letter-spacing: 8px; text-align: center;
+  padding: 20px; background: rgba(255,255,255,.05); border-radius: 14px;
+  border: 1px solid rgba(201,168,76,.25); margin: 20px 0;
+  text-shadow: 0 0 30px rgba(201,168,76,.4);
+  word-break: break-all;
+}
+.lic-code span { color: rgba(201,168,76,.4); }
+.estado-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700;
+}
+.estado-activa   { background: rgba(46,125,50,.2);  color: #81c784; border: 1px solid rgba(46,125,50,.3); }
+.estado-alerta   { background: rgba(230,81,0,.2);   color: #ffb74d; border: 1px solid rgba(230,81,0,.3); }
+.estado-expirada { background: rgba(198,40,40,.2);  color: #ef9a9a; border: 1px solid rgba(198,40,40,.3); }
+.estado-pausada  { background: rgba(21,101,192,.2); color: #90caf9; border: 1px solid rgba(21,101,192,.3); }
+.countdown-ring {
+  width: 120px; height: 120px; position: relative; flex-shrink: 0;
+}
+.countdown-ring svg { transform: rotate(-90deg); }
+.countdown-ring .track { fill: none; stroke: rgba(255,255,255,.1); stroke-width: 8; }
+.countdown-ring .fill  { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+.countdown-days { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.countdown-num { font-family: var(--ff-mono); font-size: 26px; font-weight: 700; color: #fff; line-height: 1; }
+.countdown-lbl { font-size: 9px; color: rgba(255,255,255,.5); letter-spacing: 1px; text-transform: uppercase; }
+.info-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06); color: rgba(255,255,255,.7); font-size: 13px; }
+.info-row:last-child { border-bottom: none; }
+.info-row i { color: var(--gold); width: 16px; text-align: center; }
+.info-val { margin-left: auto; font-family: var(--ff-mono); font-size: 12px; color: rgba(255,255,255,.9); }
+.hist-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.hist-row:last-child { border-bottom: none; }
+.hist-code { font-family: var(--ff-mono); font-size: 15px; font-weight: 700; color: var(--gold); letter-spacing: 3px; }
+
+/* Estilos do modal de acesso */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+.modal-container {
+  background: var(--bg-card);
+  border-radius: 24px;
+  max-width: 480px;
+  width: 90%;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(201,168,76,0.3);
+  text-align: center;
+}
+.modal-container h3 {
+  margin-bottom: 16px;
+  color: var(--gold);
+}
+.modal-container p {
+  margin-bottom: 24px;
+  color: var(--text3);
+}
+.code-input {
+  font-family: var(--ff-mono);
+  font-size: 28px;
+  letter-spacing: 8px;
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+.btn-code {
+  background: var(--gold);
+  color: #000;
+  font-weight: bold;
+}
+.error-msg {
+  color: #ef5350;
+  font-size: 13px;
+  margin-top: 12px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% if show_modal %}
+<div class="modal-overlay" id="codeModal">
+  <div class="modal-container">
+    <i class="fa-solid fa-lock" style="font-size: 48px; color: var(--gold); margin-bottom: 16px;"></i>
+    <h3>Acesso Restrito</h3>
+    <p>Esta área exige um código de segurança.<br>Introduza o código de 9 dígitos:</p>
+    <form method="post" action="">
+      {% csrf_token %}
+      <input type="text" name="codigo_acesso" class="code-input" placeholder="_________" maxlength="9" autocomplete="off" autofocus>
+      <button type="submit" class="btn btn-code btn-full btn-lg">Verificar Acesso</button>
+    </form>
+    {% if codigo_erro %}
+    <div class="error-msg">
+      <i class="fa-solid fa-circle-exclamation"></i> Código incorreto. Tente novamente.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if not show_modal %}
+<!-- ================== CONTEÚDO PRINCIPAL ================== -->
+{% if lic.estado == 'expirada' or lic.bloqueada %}
+<div class="alert alert-error" style="margin-bottom:20px">
+  <i class="fa-solid fa-lock"></i>
+  <strong>Sistema Bloqueado.</strong>
+  A licença expirou. Renove o código para restaurar o acesso a todos os utilizadores.
+</div>
+{% elif lic.estado == 'alerta' %}
+<div class="alert alert-warning" style="margin-bottom:20px">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <strong>Licença a expirar em {{ lic.dias_restantes }} dia(s).</strong>
+  Renove antes de {{ lic.data_expiracao|date:"d/m/Y" }} para evitar interrupção do serviço.
+</div>
+{% elif lic.estado == 'pausada' %}
+<div class="alert alert-warning" style="margin-bottom:20px">
+  <i class="fa-solid fa-pause-circle"></i>
+  <strong>Sistema Pausado.</strong>
+  Cobrança mensal pendente. Bloqueio automático em {{ lic.pausa_expira|date:"d/m/Y H:i" }}.
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start">
+
+  <!-- Hero da licença -->
+  <div class="lic-hero">
+    <div style="position:relative;z-index:1">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">
+            <i class="fa-solid fa-key" style="color:var(--gold)"></i> Código de Licença Activo
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span class="estado-pill estado-{{ lic.estado }}">
+              {% if lic.estado == 'activa' %}<i class="fa-solid fa-circle-check"></i> Activa
+              {% elif lic.estado == 'alerta' %}<i class="fa-solid fa-triangle-exclamation"></i> A Expirar
+              {% elif lic.estado == 'expirada' %}<i class="fa-solid fa-lock"></i> Expirada
+              {% else %}<i class="fa-solid fa-pause-circle"></i> Pausada{% endif %}
+            </span>
+            <span style="font-size:12px;color:rgba(255,255,255,.4)">Renovações: {{ lic.renovacoes }}</span>
+          </div>
+        </div>
+        <div style="margin-left:auto">
+          <div class="countdown-ring" id="ring">
+            <svg viewBox="0 0 120 120" width="120" height="120">
+              <circle class="track" cx="60" cy="60" r="50"/>
+              <circle class="fill" cx="60" cy="60" r="50" id="ringFill"
+                stroke="{% if lic.estado == 'activa' %}#c9a84c{% elif lic.estado == 'alerta' %}#ff9800{% else %}#ef5350{% endif %}"
+                stroke-dasharray="314" stroke-dashoffset="{{ ring_offset|default:0 }}" id="ringPath"/>
+            </svg>
+            <div class="countdown-days">
+              <div class="countdown-num" id="daysNum">{{ lic.dias_restantes }}</div>
+              <div class="countdown-lbl">dias</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- O código -->
+      <div class="lic-code" id="codigoDisplay">
+        {% for c in lic.codigo %}{{ c }}{% if not forloop.last and forloop.counter == 4 %}<span> </span>{% endif %}{% endfor %}
+      </div>
+
+      <!-- Informações -->
+      <div style="margin-top:16px">
+        <div class="info-row">
+          <i class="fa-solid fa-calendar-plus"></i>
+          <span>Emitido em</span>
+          <span class="info-val">{{ lic.data_emissao|date:"d/m/Y H:i" }}</span>
+        </div>
+        <div class="info-row">
+          <i class="fa-solid fa-calendar-xmark"></i>
+          <span>Expira em</span>
+          <span class="info-val">{{ lic.data_expiracao|date:"d/m/Y H:i" }}</span>
+        </div>
+        <div class="info-row">
+          <i class="fa-solid fa-bell"></i>
+          <span>Alerta activado em</span>
+          <span class="info-val">{{ lic.data_alerta|date:"d/m/Y" }}</span>
+        </div>
+        {% if lic.estado == 'pausada' %}
+        <div class="info-row" style="color:#ffb74d">
+          <i class="fa-solid fa-hourglass-half" style="color:#ffb74d"></i>
+          <span>Pausa expira em</span>
+          <span class="info-val" style="color:#ffb74d">{{ lic.pausa_expira|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if lic.renovada_por %}
+        <div class="info-row">
+          <i class="fa-solid fa-user-shield"></i>
+          <span>Última renovação por</span>
+          <span class="info-val">{{ lic.renovada_por.nome_completo }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Acções -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+
+    <!-- Renovar -->
+    <div class="card">
+      <div class="card-body">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">
+          <i class="fa-solid fa-rotate" style="color:var(--gold)"></i> Renovar Licença
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6">
+          Gera um novo código de 7 dígitos e reinicia a contagem de
+          <strong>365 dias</strong> a partir de agora. O código anterior é desactivado.
+        </div>
+        <form method="post" action="{% url 'licenca_renovar' %}"
+              onsubmit="return confirm('Confirmar renovação? O código actual será substituído e a contagem reinicia de hoje.')">
+          {% csrf_token %}
+          <button class="btn btn-gold btn-full btn-lg">
+            <i class="fa-solid fa-key"></i> Gerar Novo Código (+365 dias)
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Pausar -->
+    {% if lic.estado in 'activa,alerta' %}
+    <div class="card">
+      <div class="card-body">
+        <div style="font-size:15px;font-weight:700;color:var(--warn);margin-bottom:6px">
+          <i class="fa-solid fa-pause-circle"></i> Pausar Sistema
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6">
+          Pausa o sistema por <strong>7 dias</strong> para efectuar cobrança mensal.
+          Após 7 dias sem renovação o sistema bloqueia automaticamente.
+        </div>
+        <form method="post" action="{% url 'licenca_pausar' %}"
+              onsubmit="return confirm('Pausar o sistema? Utilizadores não-admin ficam sem acesso em 7 dias.')">
+          {% csrf_token %}
+          <div class="form-group">
+            <input type="text" name="motivo" class="form-control"
+                   placeholder="Motivo da pausa (opcional)" style="margin-bottom:10px">
+          </div>
+          <button class="btn btn-full" style="background:var(--warn-l);color:var(--warn);border:1px solid rgba(230,81,0,.2)">
+            <i class="fa-solid fa-pause"></i> Pausar (7 dias cobrança mensal)
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Info regras -->
+    <div class="card">
+      <div class="card-body">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">
+          <i class="fa-solid fa-circle-info" style="color:var(--accent)"></i> Regras de Licença
+        </div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.8">
+          <div><i class="fa-solid fa-check" style="color:var(--success)"></i> Validade: <strong>365 dias</strong></div>
+          <div><i class="fa-solid fa-bell" style="color:var(--warn)"></i> Alerta: <strong>14 dias antes</strong> de expirar</div>
+          <div><i class="fa-solid fa-lock" style="color:var(--danger)"></i> Expirado: sistema <strong>bloqueia</strong></div>
+          <div><i class="fa-solid fa-rotate" style="color:var(--gold)"></i> Renovação: novo código + <strong>reinicia contagem</strong></div>
+          <div><i class="fa-solid fa-pause" style="color:var(--warn)"></i> Pausa: <strong>7 dias</strong> para cobrança mensal</div>
+          <div><i class="fa-solid fa-key" style="color:var(--accent)"></i> Só <strong>superadmin</strong> gere licenças</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Histórico de licenças -->
+{% if historico|length > 1 %}
+<div class="card" style="margin-top:20px">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent)"></i> Histórico de Licenças</div>
+  </div>
+  <div class="card-body" style="padding:14px 22px">
+    {% for h in historico %}
+    <div class="hist-row">
+      <div class="hist-code">{{ h.codigo }}</div>
+      <span class="badge estado-{{ h.estado }} badge" style="font-size:11px">{{ h.get_estado_display }}</span>
+      <div style="font-size:12px;color:var(--text3)">
+        <i class="fa-solid fa-calendar"></i> {{ h.data_emissao|date:"d/m/Y" }}
+        → {{ h.data_expiracao|date:"d/m/Y" }}
+      </div>
+      {% if h.renovada_por %}
+      <div style="font-size:12px;color:var(--text3);margin-left:auto">
+        <i class="fa-solid fa-user-shield"></i> {{ h.renovada_por.nome_completo }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+<!-- ================== FIM DO CONTEÚDO PRINCIPAL ================== -->
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Animação do anel de countdown
+(function() {
+  const dias = {{ lic.dias_restantes }};
+  const total = 365;
+  const circ = 2 * Math.PI * 50; // 314.15
+  const pct = Math.min(Math.max(dias / total, 0), 1);
+  const offset = circ * (1 - pct);
+  const path = document.getElementById('ringPath');
+  if (path) {
+    path.style.strokeDashoffset = offset;
+  }
+})();
+</script>
+{% endblock %}

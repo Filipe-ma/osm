@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Indisponível — OSM Microcrédito</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0a1628;--gold:#c9a84c;--danger:#c62828;--ff:'Plus Jakarta Sans',sans-serif;--ff-d:'Playfair Display',serif;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--ff);background:#0a1628;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.card{background:#1e293b;border-radius:20px;padding:48px 40px;text-align:center;max-width:480px;width:100%;border:1px solid rgba(201,168,76,.15);box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.lock-icon{width:80px;height:80px;border-radius:50%;background:rgba(198,40,40,.15);border:2px solid rgba(198,40,40,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;color:#ef5350;}
+.logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;}
+.logo img{width:36px;height:36px;border-radius:8px;object-fit:contain;background:#0a1628;padding:3px;}
+.logo-text{font-family:var(--ff-d);font-size:16px;color:#fff;}
+.logo-text span{color:var(--gold);}
+h1{font-family:var(--ff-d);font-size:22px;color:#fff;margin-bottom:10px;}
+p{font-size:13px;color:rgba(255,255,255,.55);line-height:1.7;margin-bottom:20px;}
+.code-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(198,40,40,.1);border:1px solid rgba(198,40,40,.25);border-radius:10px;padding:10px 20px;font-family:'Space Mono',monospace;font-size:14px;color:#ef5350;margin-bottom:24px;}
+.contact{background:rgba(255,255,255,.04);border-radius:12px;padding:16px;font-size:12px;color:rgba(255,255,255,.4);}
+.contact strong{color:var(--gold);}
+.btn-logout{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12);border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;margin-top:20px;transition:.2s;}
+.btn-logout:hover{background:rgba(255,255,255,.14);color:#fff;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <img src="{% static 'images/logo/logo.png' %}" alt="OSM">
+    <span class="logo-text">OSM <span>Microcrédito</span></span>
+  </div>
+
+  <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
+
+  <h1>Sistema Temporariamente Indisponível</h1>
+
+  {% if lic.estado == 'pausada' %}
+  <div class="code-badge">
+    <i class="fa-solid fa-pause-circle"></i> Sistema em Manutenção
+  </div>
+  <p>
+    O sistema foi colocado em modo de manutenção pelo administrador.
+    A cobrança de licença mensal está pendente.
+    O acesso será restaurado após regularização.
+  </p>
+  {% else %}
+  <div class="code-badge">
+    <i class="fa-solid fa-triangle-exclamation"></i> Licença Expirada
+  </div>
+  <p>
+    A licença de utilização da plataforma OSM Microcrédito expirou.
+    O sistema está bloqueado até que o administrador renove a licença.
+  </p>
+  {% endif %}
+
+  <div class="contact">
+    <strong><i class="fa-solid fa-headset"></i> Contactar o Administrador</strong><br>
+    Peça ao administrador do sistema para efectuar a renovação da licença
+    através do painel de licença disponível na sua conta.
+  </div>
+
+  <a href="/logout/" class="btn-logout">
+    <i class="fa-solid fa-right-from-bracket"></i> Sair da Conta
+  </a>
+</div>
+</body>
+</html>

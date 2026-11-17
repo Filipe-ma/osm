@@ -1,0 +1,35 @@
+services:
+  web:
+    build: .
+    container_name: isge_api
+    restart: unless-stopped
+    volumes:
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+      - ./db.sqlite3:/app/db.sqlite3
+    ports:
+      - "10000:8000"  # Render exige porta 10000
+    env_file:
+      - .env
+    command: >
+      sh -c "
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        python core/create_superuser.py &&
+        exec gunicorn core.wsgi:application --bind 0.0.0.0:10000 --timeout 120 --workers 3 --worker-class sync --max-requests 1000 --max-requests-jitter 50
+      "
+
+  daphne:
+    build: .
+    container_name: isge_asgi
+    restart: unless-stopped
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+    command: >
+      daphne --bind 0.0.0.0 -p 8002 core.asgi:application
+    ports:
+      - "8004:8002"
+    env_file:
+      - .env
+    depends_on:
+      - web

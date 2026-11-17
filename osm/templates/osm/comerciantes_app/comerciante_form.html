@@ -1,0 +1,209 @@
+{% extends "osm/base.html" %}
+{% block title %}{% if editar %}Editar{% else %}Novo{% endif %} Comerciante — OSM{% endblock %}
+{% block nav_comerciantes %}active{% endblock %}
+{% block topbar_title %}{% if editar %}Editar Comerciante{% else %}Novo Comerciante{% endif %}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'comerciantes' %}" class="btn btn-secondary btn-sm">← Voltar</a>
+{% endblock %}
+
+
+
+{% block content %}
+<form method="post" id="comerciante-form" style="max-width:100%;width:100%;">
+  {% csrf_token %}
+
+  <!-- Dados do Comerciante -->
+  <div class="card" style="width:100%;max-width:640px;margin:auto;">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-user"></i> Dados do Comerciante</div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+
+        <div class="form-group" style="grid-column:span 2;">
+          <label class="form-label">Nome Completo *</label>
+          <input name="nome" class="form-control" placeholder="Nome do comerciante" value="{{ com.nome|default:'' }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tipo de Comércio</label>
+          <select name="tipo_comercio" class="form-control">
+            {% for opt in tipo_comercio_choices %}
+            <option value="{{ opt }}" {% if com.tipo_comercio == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Telefone</label>
+          <input name="telefone" class="form-control" placeholder="+258 84 000 0000" value="{{ com.telefone|default:'' }}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">NUIT</label>
+          <input name="nuit" class="form-control" value="{{ com.nuit|default:'' }}" maxlength="9" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'').slice(0,9)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nº BI</label>
+          <input name="bi" class="form-control" value="{{ com.bi|default:'' }}" maxlength="13" placeholder="Ex: 123456789012A">
+        </div>
+
+        <div class="form-group" style="grid-column:span 2;">
+          <label class="form-label">Bairro / Localização</label>
+          <input name="bairro" class="form-control" placeholder="Ex: Mercado Central" value="{{ com.bairro|default:'' }}">
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <br>
+
+  <!-- Condições do Crédito -->
+  <div class="card" style="width:100%;max-width:640px;margin:auto;">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-coins"></i> Condições do Crédito</div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+
+        <div class="form-group">
+          <label class="form-label">Capital (MT) *</label>
+          <input name="capital" id="f-cap" class="form-control" type="number" step="100" min="100"
+                 placeholder="Ex: 10000" value="{{ com.capital|default:'' }}" required oninput="calcPrev()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Data de Início</label>
+          <input name="data_inicio" id="f-data-inicio" class="form-control" type="date"
+                 value="{{ com.data_inicio|date:'Y-m-d'|default:'' }}">
+        </div>
+
+        <div class="form-group" style="grid-column:span 2;">
+          <label class="form-label">Garantia</label>
+          <input name="garantia" class="form-control" placeholder="Stock da loja, viatura, imóvel…" value="{{ com.garantia|default:'' }}">
+        </div>
+
+      </div>
+
+      <!-- Preview -->
+      <div id="preview" style="background:linear-gradient(135deg,rgba(21,101,192,.06),rgba(201,168,76,.04));border:1px solid rgba(21,101,192,.15);border-radius:12px;padding:18px;display:none;margin-top:12px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);margin-bottom:12px">Resumo — 30 dias · 30% juros</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:12px;text-align:center;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Total a Pagar</div>
+            <div style="font-family:var(--ff-mono);font-size:18px;font-weight:700;color:var(--text)" id="pv-total">—</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Parcela/Dia</div>
+            <div style="font-family:var(--ff-mono);font-size:18px;font-weight:700;color:var(--warn)" id="pv-parcela">—</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Juros (30%)</div>
+            <div style="font-family:var(--ff-mono);font-size:18px;font-weight:700;color:var(--danger)" id="pv-juros">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modalidade -->
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label"><i class="fa-solid fa-calendar-check"></i> Modalidade de Pagamento</label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+          <label style="border:2px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:.18s" id="mod-diario" onclick="selMod('diario',this)">
+            <input type="radio" name="modalidade_pagamento" value="diario" style="position:absolute;opacity:0" {% if not com or com.modalidade_pagamento == 'diario' %}checked{% endif %}>
+            <div style="font-weight:700;margin-bottom:3px"><i class="fa-solid fa-calendar-day" style="color:var(--accent)"></i> Diário</div>
+            <div style="font-size:11.5px;color:var(--text3)">Pagamento todos os dias. Multa de 2% por dia em atraso.</div>
+          </label>
+          <label style="border:2px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:.18s" id="mod-semanal" onclick="selMod('semanal',this)">
+            <input type="radio" name="modalidade_pagamento" value="semanal" style="position:absolute;opacity:0" {% if com and com.modalidade_pagamento == 'semanal' %}checked{% endif %}>
+            <div style="font-weight:700;margin-bottom:3px"><i class="fa-solid fa-calendar-week" style="color:var(--gold-d)"></i> Semanal</div>
+            <div style="font-size:11.5px;color:var(--text3)">Uma parcela por semana. Multa de 2% por semana em atraso.</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Botões -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;">
+        <button type="submit" class="btn btn-primary btn-lg" id="btn-submit" style="flex:1 1 auto;">
+          <span id="btn-text">
+            {% if editar %}<i class="fa-solid fa-floppy-disk"></i> Guardar{% else %}<i class="fa-solid fa-check"></i> Registar Comerciante{% endif %}
+          </span>
+          <span id="btn-spinner" style="display:none">
+            <span class="btn-spin"></span> A guardar…
+          </span>
+        </button>
+        <a href="{% url 'comerciantes' %}" class="btn btn-secondary btn-lg" style="flex:1 1 auto;">Cancelar</a>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+<script>
+// Set today as default date if empty
+(function() {
+  const dateInput = document.getElementById('f-data-inicio');
+  if (dateInput && !dateInput.value) {
+    const today = new Date();
+    dateInput.value = today.toISOString().split('T')[0];
+  }
+})();
+
+function calcPrev() {
+  const cap = parseFloat(document.getElementById('f-cap').value) || 0;
+  const pv = document.getElementById('preview');
+  if (cap < 100) { pv.style.display = 'none'; return; }
+  pv.style.display = 'block';
+  const total   = cap * 1.30;
+  const parcela = Math.floor(total / 30 * 100) / 100;
+  const juros   = total - cap;
+  const fmt = v => 'MT ' + Math.round(v).toLocaleString('pt-PT');
+  document.getElementById('pv-total').textContent   = fmt(total);
+  document.getElementById('pv-parcela').textContent = fmt(parcela);
+  document.getElementById('pv-juros').textContent   = fmt(juros);
+}
+calcPrev();
+
+function selMod(m, el) {
+  ['diario', 'semanal'].forEach(t => {
+    const c = document.getElementById('mod-' + t);
+    c.style.borderColor = t === m ? 'var(--accent)' : 'var(--border)';
+    c.style.background  = t === m ? 'var(--accent-l)' : '';
+    c.querySelector('input').checked = t === m;
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const checked = document.querySelector('input[name=modalidade_pagamento]:checked');
+  if (checked) selMod(checked.value, document.getElementById('mod-' + checked.value));
+});
+
+// Spinner on submit + SweetAlert confirmation
+document.getElementById('comerciante-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const form = this;
+  const nativeSubmit = () => HTMLFormElement.prototype.submit.call(form);
+  const nome = document.querySelector('[name=nome]').value.trim();
+  const cap  = document.querySelector('[name=capital]').value.trim();
+  if (!nome || !cap) return nativeSubmit();
+
+  const action = '{% if editar %}guardar as alterações{% else %}registar o comerciante{% endif %}';
+  Swal.fire({
+    title: 'Confirmar?',
+    text: `Tem a certeza que deseja ${action} de ${nome}?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sim, confirmar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: 'var(--accent, #1565c0)',
+  }).then(result => {
+    if (result.isConfirmed) {
+      document.getElementById('btn-text').style.display = 'none';
+      document.getElementById('btn-spinner').style.display = 'inline-flex';
+      document.getElementById('btn-submit').disabled = true;
+      nativeSubmit();
+    }
+  });
+});
+</script>
+{% endblock %}

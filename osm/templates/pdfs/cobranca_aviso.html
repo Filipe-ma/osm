@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+{% load static %}
+{% load osm_tags %}
+<style>
+/* Reset e configuração da página */
+@page {
+  size: A4;
+  margin: 0;
+  @bottom-center {
+    content: ""; /* reservado para rodapé fixo via elemento posicionado */
+  }
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DejaVu Sans', Arial, sans-serif;
+  background: #fff;
+  color: #111;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact; /* garante cores na impressão */
+  print-color-adjust: exact;
+}
+
+/* Página principal */
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 16mm 20mm;
+  position: relative;
+  background: #fff;
+  margin: 0 auto;
+  page-break-after: avoid;
+}
+
+/* Marca d'água diagonal (vetor, não bitmap) */
+.watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg);
+  font-size: 72pt;
+  font-weight: 900;
+  color: rgba(21,101,192,.04);
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 4px;
+  z-index: 0;
+  font-family: inherit;
+}
+
+/* Barra lateral azul (gradiente vetorial) */
+.side-bar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6mm;
+  background: linear-gradient(180deg, #1565c0 0%, #0d47a1 50%, #c9a84c 100%);
+}
+
+/* ========== CABEÇALHO ========== */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 10pt;
+  border-bottom: 2.5pt solid #1565c0;
+  margin-bottom: 12pt;
+}
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12pt;
+  flex: 1;
+}
+.logo-img {
+  width: 48pt;
+  height: auto;
+  max-height: 48pt;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.company-info {
+  flex: 1;
+}
+.co-name {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #1565c0;
+  line-height: 1.2;
+}
+.co-sub {
+  font-size: 7.5pt;
+  color: #64748b;
+  margin-top: 1pt;
+}
+.co-info {
+  font-size: 7pt;
+  color: #94a3b8;
+  margin-top: 5pt;
+  line-height: 1.8;
+}
+.doc-block {
+  text-align: right;
+  flex-shrink: 0;
+}
+.doc-tipo {
+  font-size: 11pt;
+  font-weight: 800;
+  color: #1565c0;
+  text-transform: uppercase;
+  letter-spacing: 1.5pt;
+  line-height: 1;
+}
+.doc-sub {
+  font-size: 7.5pt;
+  color: #94a3b8;
+  letter-spacing: 1.2pt;
+  text-transform: uppercase;
+  margin-top: 2pt;
+}
+.doc-ref {
+  font-size: 10pt;
+  font-weight: 800;
+  color: #0d47a1;
+  margin-top: 5pt;
+  font-family: 'Courier New', monospace;
+}
+.doc-data {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 2pt;
+}
+
+/* ========== ALERTAS ========== */
+.strip-atraso {
+  background: linear-gradient(90deg, #c62828, #b71c1c);
+  color: #fff;
+  border-radius: 6pt;
+  padding: 8pt 12pt;
+  display: flex;
+  align-items: center;
+  gap: 10pt;
+  margin-bottom: 11pt;
+}
+.strip-normal {
+  background: linear-gradient(90deg, #1565c0, #0d47a1);
+  color: #fff;
+  border-radius: 6pt;
+  padding: 8pt 12pt;
+  display: flex;
+  align-items: center;
+  gap: 10pt;
+  margin-bottom: 11pt;
+}
+.strip-icon {
+  font-size: 18pt;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.strip-body {
+  flex: 1;
+}
+.strip-title {
+  font-size: 11pt;
+  font-weight: 800;
+}
+.strip-sub {
+  font-size: 8pt;
+  opacity: .85;
+  margin-top: 1pt;
+}
+.strip-days {
+  background: rgba(255,255,255,.18);
+  border-radius: 6pt;
+  padding: 5pt 12pt;
+  text-align: center;
+  flex-shrink: 0;
+}
+.strip-days-num {
+  font-size: 22pt;
+  font-weight: 900;
+  line-height: 1;
+}
+.strip-days-label {
+  font-size: 7pt;
+  opacity: .85;
+}
+
+/* ========== GRID 2 COLUNAS ========== */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10pt;
+  margin-bottom: 10pt;
+}
+
+/* ========== TÍTULOS DE SEÇÃO ========== */
+.sec-title {
+  font-size: 7.5pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2pt;
+  color: #1565c0;
+  border-bottom: 1.5pt solid #e2e8f0;
+  padding-bottom: 4pt;
+  margin-bottom: 7pt;
+}
+
+/* ========== CAIXAS ========== */
+.box {
+  border: 1pt solid #e2e8f0;
+  border-radius: 6pt;
+  padding: 8pt 10pt;
+  background: #f8fafc;
+}
+.box-danger {
+  border-color: rgba(198,40,40,.3);
+  background: rgba(198,40,40,.03);
+}
+.box-blue {
+  border-color: rgba(21,101,192,.3);
+  background: rgba(21,101,192,.03);
+}
+.box-gold {
+  border-color: rgba(201,168,76,.35);
+  background: rgba(201,168,76,.04);
+}
+
+/* ========== LINHAS CHAVE-VALOR ========== */
+.kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4pt 0;
+  border-bottom: .5pt solid #f1f5f9;
+  gap: 8pt;
+}
+.kv:last-child {
+  border-bottom: none;
+}
+.kv-k {
+  font-size: 8.5pt;
+  color: #64748b;
+  flex-shrink: 0;
+}
+.kv-v {
+  font-size: 10pt;
+  font-weight: 700;
+  color: #111;
+  text-align: right;
+}
+.kv-v.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 9pt;
+}
+.kv-v.red {
+  color: #c62828;
+}
+.kv-v.blue {
+  color: #1565c0;
+}
+
+/* ========== KPIs ========== */
+.kpi3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8pt;
+  margin-bottom: 10pt;
+}
+.kpi {
+  border-radius: 6pt;
+  padding: 9pt 10pt;
+  border: 1pt solid #e2e8f0;
+}
+.kpi-lbl {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: .8pt;
+  color: #94a3b8;
+  margin-bottom: 3pt;
+}
+.kpi-val {
+  font-size: 17pt;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.5pt;
+}
+.kpi-sub {
+  font-size: 7.5pt;
+  color: #94a3b8;
+  margin-top: 2pt;
+}
+.kpi-r {
+  background: rgba(198,40,40,.04);
+  border-color: rgba(198,40,40,.2);
+}
+.kpi-r .kpi-val {
+  color: #c62828;
+}
+.kpi-b {
+  background: rgba(21,101,192,.04);
+  border-color: rgba(21,101,192,.2);
+}
+.kpi-b .kpi-val {
+  color: #1565c0;
+}
+.kpi-w {
+  background: rgba(230,81,0,.04);
+  border-color: rgba(230,81,0,.2);
+}
+.kpi-w .kpi-val {
+  color: #e65100;
+}
+
+/* ========== VALORES ========== */
+.valor-block {
+  background: #f8fafc;
+  border: 1pt solid #e2e8f0;
+  border-radius: 6pt;
+  padding: 9pt 12pt;
+  margin-bottom: 10pt;
+}
+.valor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5pt 0;
+  border-bottom: .5pt solid #e2e8f0;
+}
+.valor-row:last-child {
+  border-bottom: none;
+}
+.valor-lbl {
+  font-size: 8.5pt;
+  color: #64748b;
+}
+.valor-num {
+  font-size: 13pt;
+  font-weight: 900;
+  color: #1565c0;
+  font-family: 'Courier New', monospace;
+}
+.valor-extenso {
+  font-size: 8pt;
+  color: #94a3b8;
+  font-style: italic;
+  margin-top: 1pt;
+  text-align: right;
+}
+
+/* ========== TOTAL A PAGAR ========== */
+.total-box {
+  border: 2pt solid #c62828;
+  border-radius: 8pt;
+  padding: 11pt 14pt;
+  background: rgba(198,40,40,.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10pt;
+}
+.total-left {
+  flex: 1;
+}
+.total-lbl {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: .8pt;
+  color: #94a3b8;
+}
+.total-sub {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 2pt;
+}
+.total-extenso {
+  font-size: 8pt;
+  color: #94a3b8;
+  font-style: italic;
+  margin-top: 3pt;
+  max-width: 260pt;
+}
+.total-val {
+  font-size: 26pt;
+  font-weight: 900;
+  color: #c62828;
+  letter-spacing: -1pt;
+  line-height: 1;
+  text-align: right;
+}
+.total-ref {
+  font-size: 8pt;
+  color: #94a3b8;
+  text-align: right;
+  margin-top: 2pt;
+}
+
+/* ========== DADOS DE PAGAMENTO ========== */
+.pay-box {
+  border: 1.5pt solid #1565c0;
+  border-radius: 7pt;
+  padding: 9pt 11pt;
+  background: rgba(21,101,192,.03);
+  margin-bottom: 10pt;
+}
+.pay-title {
+  font-size: 8pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1pt;
+  color: #1565c0;
+  margin-bottom: 7pt;
+  display: flex;
+  align-items: center;
+  gap: 5pt;
+}
+.pay-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6pt;
+}
+.pay-item {
+  background: #fff;
+  border-radius: 5pt;
+  border: .5pt solid #e2e8f0;
+  padding: 7pt 8pt;
+}
+.pay-lbl {
+  font-size: 7pt;
+  text-transform: uppercase;
+  letter-spacing: .8pt;
+  color: #94a3b8;
+  margin-bottom: 3pt;
+}
+.pay-val {
+  font-size: 9pt;
+  font-weight: 800;
+  color: #111;
+  font-family: 'Courier New', monospace;
+}
+.pay-sub {
+  font-size: 7.5pt;
+  color: #64748b;
+  margin-top: 1pt;
+}
+
+/* ========== OBSERVAÇÕES ========== */
+.obs-box {
+  border: 1pt dashed #d1d5db;
+  border-radius: 6pt;
+  padding: 8pt 11pt;
+  min-height: 42pt;
+  margin-bottom: 9pt;
+  font-size: 9pt;
+  color: #64748b;
+}
+
+/* ========== NOTA LEGAL ========== */
+.legal-box {
+  background: rgba(1,87,155,.03);
+  border: .5pt solid rgba(1,87,155,.15);
+  border-radius: 6pt;
+  padding: 9pt 11pt;
+  margin-bottom: 14pt;
+}
+.legal-box p {
+  font-size: 7.5pt;
+  color: #475569;
+  line-height: 1.65;
+  text-align: justify;
+}
+
+/* ========== ASSINATURAS ========== */
+.sign-row {
+  display: flex;
+  gap: 24pt;
+  margin-top: 14pt;
+}
+.sign-block {
+  flex: 1;
+  border-top: .75pt solid #111;
+  padding-top: 5pt;
+}
+.sign-lbl {
+  font-size: 8pt;
+  color: #64748b;
+}
+.sign-name {
+  font-size: 9pt;
+  font-weight: 800;
+  margin-top: 2pt;
+}
+.sign-role {
+  font-size: 7.5pt;
+  color: #94a3b8;
+}
+
+/* ========== RODAPÉ FIXO (IMPRESSÃO) ========== */
+.footer-print {
+  position: fixed;
+  bottom: 8mm;
+  left: 16mm;
+  right: 16mm;
+  font-size: 7.5pt;
+  color: #94a3b8;
+  text-align: center;
+  border-top: .75pt solid #e2e8f0;
+  padding-top: 3pt;
+  background: white;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+}
+.footer-print .footer-text {
+  text-align: left;
+}
+.footer-print .page-number {
+  text-align: right;
+}
+.footer-print .page-number::after {
+  content: counter(page);
+}
+@media print {
+  .print-button {
+    display: none;
+  }
+  .footer-print {
+    display: flex;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  .page {
+    margin: 0;
+    padding: 14mm 16mm 20mm;
+    box-shadow: none;
+  }
+}
+
+/* ========== BOTÃO DE IMPRESSÃO ========== */
+.print-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 1000;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+.print-button:hover {
+  background: #0d47a1;
+}
+</style>
+</head>
+<body>
+<div class="watermark">OSM</div>
+<div class="side-bar"></div>
+
+<div class="page">
+  <!-- CABEÇALHO -->
+  <div class="header">
+    <div class="logo-wrap">
+      <img class="logo-img" src="{% static 'images/logo/logo.png' %}" alt="OSM Microcrédito">
+      <div class="company-info">
+        <div class="co-name">Office Semente Microcrédito</div>
+        <div class="co-sub">Empresa em Nome Individual · NUIT 150493129</div>
+        <div class="co-info">
+          EN6 Bairro Centro Hípico, Chimoio, Manica, Moçambique<br>
+          Tel: +258 87 203 1215 &nbsp;·&nbsp; officebernardo@gmail.com
+        </div>
+      </div>
+    </div>
+    <div class="doc-block">
+      <div class="doc-tipo">Aviso de Cobrança</div>
+      <div class="doc-sub">Notificação Oficial</div>
+      <div class="doc-ref">Ref: {{ emprestimo.numero_contrato }}</div>
+      <div class="doc-data">Emitido em: {{ hoje }}</div>
+    </div>
+  </div>
+
+  <!-- STRIP DE SITUAÇÃO -->
+  {% if emprestimo.dias_atraso > 0 %}
+  <div class="strip-atraso">
+    <div class="strip-icon">⚠</div>
+    <div class="strip-body">
+      <div class="strip-title">Parcela em Atraso — Regularização Urgente</div>
+      <div class="strip-sub">A mora de {{ banco.taxa_multa_padrao }}%/dia está a ser aplicada. Evite penalizações adicionais.</div>
+    </div>
+    <div class="strip-days">
+      <div class="strip-days-num">{{ emprestimo.dias_atraso }}</div>
+      <div class="strip-days-label">dias em atraso</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="strip-normal">
+    <div class="strip-icon">🔔</div>
+    <div class="strip-body">
+      <div class="strip-title">Lembrete de Pagamento</div>
+      <div class="strip-sub">Parcela próxima do vencimento. Regularize dentro do prazo para evitar mora.</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- DADOS CLIENTE + CONTRATO -->
+  <div class="grid2">
+    <div>
+      <div class="sec-title">Dados do Cliente</div>
+      <div class="box">
+        <div class="kv"><span class="kv-k">Nome completo</span><span class="kv-v">{{ emprestimo.nome }}</span></div>
+        <div class="kv"><span class="kv-k">BI / NUIT</span><span class="kv-v mono">{{ emprestimo.bi|default:emprestimo.nuit|default:"—" }}</span></div>
+        <div class="kv"><span class="kv-k">Telefone</span><span class="kv-v mono">{{ emprestimo.telefone|default:"—" }}</span></div>
+        <div class="kv"><span class="kv-k">Morada</span><span class="kv-v" style="font-size:9pt">{{ emprestimo.bairro }}{% if emprestimo.bairro %}, {% endif %}{{ emprestimo.distrito|default:"Chimoio" }}</span></div>
+        <div class="kv"><span class="kv-k">Sector</span><span class="kv-v">{{ emprestimo.sector|default:"—" }}</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-title">Dados do Contrato</div>
+      <div class="box">
+        <div class="kv"><span class="kv-k">Nº Contrato</span><span class="kv-v mono blue">{{ emprestimo.numero_contrato }}</span></div>
+        <div class="kv"><span class="kv-k">Data de Início</span><span class="kv-v">{{ emprestimo.data_inicio|date:"d/m/Y" }}</span></div>
+        <div class="kv"><span class="kv-k">Data de Vencimento</span><span class="kv-v red">{{ emprestimo.data_vencimento|date:"d/m/Y" }}</span></div>
+        <div class="kv"><span class="kv-k">Taxa de Juro</span><span class="kv-v">{{ emprestimo.taxa_juros }}%/mês</span></div>
+        <div class="kv"><span class="kv-k">Registado por</span><span class="kv-v" style="font-size:9pt">{{ emprestimo.registado_por|default:"—" }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALOR DO EMPRÉSTIMO -->
+  <div class="sec-title">Valor do Empréstimo</div>
+  <div class="valor-block">
+    <div class="valor-row">
+      <span class="valor-lbl">Valor Solicitado (Capital)</span>
+      <div style="text-align:right">
+        <div class="valor-num">MT {{ emprestimo.valor|floatformat:2 }}</div>
+        <div class="valor-extenso">{{ emprestimo.valor|por_extenso }}</div>
+      </div>
+    </div>
+    <div class="valor-row">
+      <span class="valor-lbl">Total com Juros (30 dias)</span>
+      <div style="text-align:right">
+        <div class="valor-num" style="color:#e65100">MT {{ emprestimo.total_a_pagar|floatformat:2 }}</div>
+        <div class="valor-extenso">{{ emprestimo.total_a_pagar|por_extenso }}</div>
+      </div>
+    </div>
+    {% if emprestimo.saldo_restante %}
+    <div class="valor-row">
+      <span class="valor-lbl">Saldo Restante a Liquidar</span>
+      <div style="text-align:right">
+        <div class="valor-num" style="color:#c62828">MT {{ emprestimo.saldo_restante|floatformat:2 }}</div>
+        <div class="valor-extenso">{{ emprestimo.saldo_restante|por_extenso }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- KPIs FINANCEIROS -->
+  <div class="kpi3">
+    <div class="kpi kpi-b">
+      <div class="kpi-lbl">Capital Emprestado</div>
+      <div class="kpi-val">{{ emprestimo.valor|floatformat:0 }}</div>
+      <div class="kpi-sub">meticais</div>
+    </div>
+    <div class="kpi kpi-w">
+      <div class="kpi-lbl">Total com Juros</div>
+      <div class="kpi-val">{{ emprestimo.total_a_pagar|floatformat:0 }}</div>
+      <div class="kpi-sub">meticais ({{ emprestimo.taxa_juros }}%)</div>
+    </div>
+    <div class="kpi kpi-r">
+      <div class="kpi-lbl">Mora Acumulada</div>
+      <div class="kpi-val">{{ emprestimo.mora_composta|floatformat:2 }}</div>
+      <div class="kpi-sub">MT · {{ emprestimo.dias_atraso }}d × {{ banco.taxa_multa_padrao }}%</div>
+    </div>
+  </div>
+
+  <!-- TOTAL A PAGAR HOJE -->
+  <div class="total-box">
+    <div class="total-left">
+      <div class="total-lbl">Valor Total a Pagar Hoje</div>
+      <div class="total-sub">Capital + Juros + Mora acumulada de {{ emprestimo.dias_atraso }} dia(s)</div>
+      <div class="total-extenso">({{ emprestimo.total_a_pagar|por_extenso }})</div>
+    </div>
+    <div>
+      <div class="total-val">MT {{ emprestimo.total_a_pagar|floatformat:2 }}</div>
+      <div class="total-ref">Ref: {{ emprestimo.numero_contrato }}</div>
+    </div>
+  </div>
+
+  <!-- DADOS DE PAGAMENTO -->
+  <div class="pay-box">
+    <div class="pay-title">💳 Dados para Regularização do Pagamento</div>
+    <div class="pay-methods">
+      <div class="pay-item">
+        <div class="pay-lbl">Banco</div>
+        <div class="pay-val" style="font-family:inherit;font-size:9pt">{{ banco.banco }}</div>
+        <div class="pay-sub">Depósito bancário</div>
+      </div>
+      <div class="pay-item">
+        <div class="pay-lbl">Conta · NIB</div>
+        <div class="pay-val">{{ banco.conta }}</div>
+        <div class="pay-sub">NIB: {{ banco.nib }}</div>
+      </div>
+      <div class="pay-item">
+        <div class="pay-lbl">Titular · e-Mola</div>
+        <div class="pay-val" style="font-family:inherit;font-size:8.5pt">{{ banco.titular }}</div>
+        <div class="pay-sub">e-Mola: {{ banco.emola_numero }}</div>
+      </div>
+    </div>
+  </div>
+<br>
+<div></div>
+<br>
+<div></div>
+<div>
+  <div><br></div>
+</div>
+<br>
+<div></div>
+<br>
+<div></div>
+<br>
+<div></div>
+<div>
+  <div></div>
+</div>
+<br>
+<div></div>
+<br>
+  <!-- OBSERVAÇÕES -->
+  <div class="sec-title">Observações</div>
+  <div class="obs-box">
+    {% if emprestimo.observacoes %}
+      {{ emprestimo.observacoes }}
+    {% else %}
+      Prezado(a) {{ emprestimo.nome }}, informamos que a sua obrigação financeira referente ao contrato
+      {{ emprestimo.numero_contrato }} encontra-se pendente de regularização. Solicitamos que proceda
+      ao pagamento dentro do prazo indicado para evitar penalizações adicionais e acções legais.
+      Para qualquer esclarecimento contacte-nos: +258 87 203 1215.
+    {% endif %}
+  </div>
+
+  <!-- NOTA LEGAL -->
+  <div class="legal-box">
+    <p>
+      <strong>Nota Legal:</strong> Este aviso de cobrança é emitido nos termos do contrato de microcrédito
+      celebrado entre as partes. O incumprimento das obrigações dentro dos prazos estabelecidos dará lugar
+      à aplicação de penalizações previstas no contrato (mora de {{ banco.taxa_multa_padrao }}%/dia),
+      bem como ao encaminhamento do processo para instâncias de cobrança judicial nos termos da
+      legislação moçambicana em vigor (Lei n.º 4/2020 e Decreto n.º 36/2021).
+      O presente documento não representa quitação de dívida.
+    </p>
+  </div>
+<br>
+<div></div>
+<div>
+  <div></div>
+</div>
+<br>
+<div></div>
+<br>
+  <!-- ASSINATURAS -->
+  <div class="sign-row">
+    <div class="sign-block" style="max-width:170pt">
+      <div class="sign-lbl">Chimoio, {{ hoje }}</div>
+      <div class="sign-name">{{ emprestimo.registado_por|default:"Gestor de Crédito" }}</div>
+      <div class="sign-role">Gestor de Crédito · OSM Microcrédito</div>
+    </div>   
+    <div style="flex:1"></div>
+    <div class="sign-block" style="max-width:170pt">
+      <div class="sign-lbl">Assinatura e Carimbo</div>
+      <div class="sign-name">Office Semente Microcrédito E.I.</div>
+      <div class="sign-role">NUIT: 150493129 · Documento oficial</div>
+    </div>
+  </div>
+
+  <!-- RODAPÉ FIXO (aparece em todas as páginas impressas) -->
+  <div class="footer-print">
+    <span class="footer-text">OSM Microcrédito — Documento Confidencial</span>
+    <span class="page-number">Página </span>
+  </div>
+</div>
+
+<button class="print-button" onclick="window.print();">
+  🖨️ Imprimir / Salvar PDF
+</button>
+
+<!-- CSS para garantir que o contador de página funcione -->
+<style>
+  /* Contador de página para impressão */
+  .page-number::after {
+    content: counter(page);
+  }
+  @media print {
+    .page-number::after {
+      content: counter(page);
+    }
+  }
+</style>
+</body>
+</html>

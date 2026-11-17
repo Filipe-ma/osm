@@ -1,0 +1,279 @@
+{% extends "osm/base.html" %}
+{% block title %}Solicitação — {{ sol.nome_completo }}{% endblock %}
+{% block nav_solicitacoes %}active{% endblock %}
+{% block topbar_title %}{{ sol.nome_completo }}{% endblock %}
+{% block topbar_sub %}Solicitação #{{ sol.pk }} · {{ sol.get_status_display }}{% endblock %}
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+<a href="{% url 'solicitacoes_lista' %}" class="btn btn-secondary btn-sm">
+  <i class="fa-solid fa-arrow-left"></i> Voltar
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.status-banner{border-radius:14px;padding:18px 22px;display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.status-banner.submetido{background:rgba(230,81,0,.07);border:1px solid rgba(230,81,0,.2)}
+.status-banner.em_analise{background:rgba(21,101,192,.07);border:1px solid rgba(21,101,192,.2)}
+.status-banner.aprovado{background:rgba(46,125,50,.07);border:1px solid rgba(46,125,50,.2)}
+.status-banner.rejeitado{background:rgba(198,40,40,.07);border:1px solid rgba(198,40,40,.2)}
+.cred-box{background:linear-gradient(135deg,#0a1628 0%,#1e3a5f 100%);border-radius:14px;padding:22px;margin-top:14px}
+.cred-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:4px}
+.cred-value{font-family:var(--ff-mono);font-size:17px;font-weight:700;color:var(--gold)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+
+  <div>
+    <!-- Status banner -->
+    {% if sol.status == 'submetido' %}
+    <div class="status-banner submetido">
+      <i class="fa-solid fa-inbox" style="font-size:26px;color:var(--warn)"></i>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--warn)">Nova Solicitação</div>
+        <div style="font-size:13px;color:var(--text2)">Recebida em {{ sol.data_submissao|date:"d/m/Y \à\s H:i" }}. Aguarda análise.</div>
+      </div>
+      {% if request.user.pode_aprovar %}
+      <form method="post" action="{% url 'solicitacao_em_analise' sol.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-magnifying-glass"></i> Marcar Em Análise
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% elif sol.status == 'em_analise' %}
+    <div class="status-banner em_analise">
+      <i class="fa-solid fa-magnifying-glass-chart" style="font-size:26px;color:var(--accent)"></i>
+      <div>
+        <div style="font-weight:700;color:var(--accent)">Em Análise</div>
+        <div style="font-size:13px;color:var(--text2)">A ser avaliada por {{ sol.avaliado_por.nome_completo|default:"—" }}</div>
+      </div>
+    </div>
+    {% elif sol.status == 'aprovado' %}
+    <div class="status-banner aprovado">
+      <i class="fa-solid fa-circle-check" style="font-size:26px;color:var(--success)"></i>
+      <div>
+        <div style="font-weight:700;color:var(--success)">Aprovada</div>
+        <div style="font-size:13px;color:var(--text2)">Por {{ sol.avaliado_por.nome_completo }} em {{ sol.data_resposta|date:"d/m/Y" }}</div>
+      </div>
+    </div>
+    {% elif sol.status == 'rejeitado' %}
+    <div class="status-banner rejeitado">
+      <i class="fa-solid fa-circle-xmark" style="font-size:26px;color:var(--danger)"></i>
+      <div>
+        <div style="font-weight:700;color:var(--danger)">Rejeitada</div>
+        <div style="font-size:13px;color:var(--text2)">{{ sol.motivo_rejeicao|default:"Sem motivo especificado" }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Dados pessoais -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-user-circle" style="color:var(--accent)"></i> Dados do Solicitante</div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-signature"></i> Nome</span><span class="detail-val">{{ sol.nome_completo }}</span></div>
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-phone"></i> Telefone</span><span class="detail-val td-mono">{{ sol.telefone }}</span></div>
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-envelope"></i> Email</span><span class="detail-val">{{ sol.email|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-id-card"></i> BI</span><span class="detail-val td-mono">{{ sol.bi|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-hashtag"></i> NUIT</span><span class="detail-val td-mono">{{ sol.nuit|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-map-marker-alt"></i> Bairro</span><span class="detail-val">{{ sol.bairro|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-heart"></i> Estado Civil</span><span class="detail-val">{{ sol.estado_civil|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key"><i class="fa-solid fa-globe"></i> IP Origem</span><span class="detail-val td-mono" style="font-size:11px">{{ sol.ip_origem|default:"—" }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pedido -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-hand-holding-dollar" style="color:var(--gold)"></i> Pedido de Empréstimo</div>
+      </div>
+      <div class="card-body">
+        <div class="detail-row">
+          <span class="detail-key"><i class="fa-solid fa-coins"></i> Valor Solicitado</span>
+          <span class="detail-val" style="font-family:var(--ff-mono);font-size:22px;color:var(--gold);font-weight:700">MT {{ sol.valor_pedido|floatformat:2 }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key"><i class="fa-solid fa-bullseye"></i> Finalidade</span>
+          <span class="detail-val">{{ sol.finalidade }}</span>
+        </div>
+        {% if sol.garantia_desc %}
+        <div class="detail-row">
+          <span class="detail-key"><i class="fa-solid fa-shield-halved"></i> Garantia</span>
+          <span class="detail-val">{{ sol.garantia_desc }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Documentação -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-folder-open" style="color:var(--accent)"></i> Documentação</div>
+      </div>
+      <div class="card-body">
+        {% if sol.documento_pdf %}
+        <div style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <i class="fa-solid fa-file-pdf" style="font-size:32px;color:#e53935"></i>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">Documentação do Solicitante</div>
+            <div style="font-size:12px;color:var(--text3)">BI · NUIT · Declaração de residência · Rendimento</div>
+          </div>
+          <a href="{{ sol.documento_pdf.url }}" target="_blank" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-eye"></i> Ver PDF
+          </a>
+        </div>
+        {% else %}
+        <div style="padding:20px;text-align:center;color:var(--text3)">
+          <i class="fa-solid fa-file-slash" style="font-size:28px;margin-bottom:8px;display:block"></i>
+          Nenhum documento anexado.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Resultado da aprovação -->
+    {% if sol.status == 'aprovado' and sol.utilizador_criado %}
+    <div class="card" style="border-color:rgba(46,125,50,.3)">
+      <div class="card-header" style="background:rgba(46,125,50,.04)">
+        <div class="card-title" style="color:var(--success)"><i class="fa-solid fa-user-check"></i> Conta e Empréstimo Criados</div>
+      </div>
+      <div class="card-body">
+        <div class="cred-box">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px">
+            <div>
+              <div class="cred-label">Username</div>
+              <div class="cred-value">{{ sol.utilizador_criado.username }}</div>
+            </div>
+            <div>
+              <div class="cred-label">Senha Inicial</div>
+              <div class="cred-value">{{ sol.utilizador_criado.senha_inicial|default:"(já alterada)" }}</div>
+            </div>
+            <div>
+              <div class="cred-label">Contrato</div>
+              <div class="cred-value">
+                {% if sol.emprestimo_criado %}
+                <a href="{% url 'emprestimo_detalhe' sol.emprestimo_criado.pk %}" style="color:var(--gold);text-decoration:underline">{{ sol.emprestimo_criado.numero_contrato }}</a>
+                {% else %}—{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text3)">
+          <i class="fa-solid fa-circle-info"></i>
+          O cliente deve aceder em <strong>/login/</strong> com as credenciais acima e alterar a senha no primeiro acesso.
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar acções -->
+  <div>
+    <div class="card" style="position:sticky;top:80px">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-sliders"></i> Acções do Gestor</div>
+      </div>
+      <div class="card-body">
+
+        {% if sol.status in 'submetido,em_analise' and request.user.pode_aprovar %}
+        <form method="post" action="{% url 'solicitacao_aprovar' sol.pk %}"
+              onsubmit="return confirm('Confirmar aprovação? Será criada conta e empréstimo.')">
+          {% csrf_token %}
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-coins"></i> Valor Aprovado (MT)</label>
+            <input type="number" name="valor_aprovado" class="form-control"
+                   value="{{ sol.valor_pedido|floatformat:2 }}" step="0.01" min="1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-regular fa-note-sticky"></i> Nota Interna</label>
+            <textarea name="nota_gestor" class="form-control" rows="2"
+                      placeholder="Observações (opcional)"></textarea>
+          </div>
+          <button type="submit" class="btn btn-success btn-full btn-lg" style="margin-bottom:12px">
+            <i class="fa-solid fa-circle-check"></i> Aprovar e Criar Conta
+          </button>
+        </form>
+        <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+        <button class="btn btn-danger btn-full"
+                onclick="document.getElementById('modalRejeitar').style.display='flex'">
+          <i class="fa-solid fa-ban"></i> Rejeitar Solicitação
+        </button>
+
+        {% elif sol.status == 'aprovado' %}
+        <div style="text-align:center;padding:16px 0">
+          <i class="fa-solid fa-circle-check" style="font-size:38px;color:var(--success);display:block;margin-bottom:8px"></i>
+          <div style="font-weight:700;color:var(--success);font-size:15px">Aprovada com Sucesso</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">{{ sol.data_resposta|date:"d/m/Y \à\s H:i" }}</div>
+        </div>
+        {% if sol.emprestimo_criado %}
+        <a href="{% url 'emprestimo_detalhe' sol.emprestimo_criado.pk %}" class="btn btn-primary btn-full" style="margin-top:10px">
+          <i class="fa-solid fa-hand-holding-dollar"></i> Ver Empréstimo
+        </a>
+        {% endif %}
+
+        {% elif sol.status == 'rejeitado' %}
+        <div style="text-align:center;padding:16px 0">
+          <i class="fa-solid fa-circle-xmark" style="font-size:38px;color:var(--danger);display:block;margin-bottom:8px"></i>
+          <div style="font-weight:700;color:var(--danger);font-size:15px">Rejeitada</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">{{ sol.data_resposta|date:"d/m/Y \à\s H:i"|default:"—" }}</div>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">
+          <i class="fa-solid fa-lock" style="margin-bottom:8px;display:block;font-size:24px"></i>
+          Sem permissão para agir.
+        </div>
+        {% endif %}
+
+        <!-- Meta -->
+        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+          <div class="detail-row">
+            <span class="detail-key">Submetida</span>
+            <span class="detail-val" style="font-size:12px">{{ sol.data_submissao|date:"d/m/Y H:i" }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Avaliada por</span>
+            <span class="detail-val" style="font-size:12px">{{ sol.avaliado_por.nome_completo|default:"—" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Rejeitar -->
+<div id="modalRejeitar"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:18px;padding:30px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:18px;font-weight:700;color:var(--danger);margin-bottom:6px">
+      <i class="fa-solid fa-ban"></i> Rejeitar Solicitação
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:18px">
+      O motivo da rejeição ficará registado no sistema.
+    </div>
+    <form method="post" action="{% url 'solicitacao_rejeitar' sol.pk %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Motivo <span style="color:var(--danger)">*</span></label>
+        <textarea name="motivo" class="form-control" rows="3" required
+          placeholder="Ex: Documentação incompleta, garantia insuficiente..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('modalRejeitar').style.display='none'">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-danger">
+          <i class="fa-solid fa-ban"></i> Confirmar Rejeição
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "osm/base.html" %}
+{% block title %}Ficha — {{ u.nome_completo }}{% endblock %}
+{% block nav_utilizadores %}active{% endblock %}
+{% block topbar_title %}Ficha do Utilizador{% endblock %}
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+<a href="{% url 'utilizador_pdf' u.pk %}" class="btn btn-primary btn-sm" target="_blank">⬇ Baixar PDF</a>
+<a href="{% url 'utilizadores' %}" class="btn btn-secondary btn-sm">← Utilizadores</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin:0 auto">
+  <div class="card">
+    <div style="background:linear-gradient(135deg,#0a1628,#1e3a5f);padding:32px;color:#fff;border-radius:12px 12px 0 0">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="width:64px;height:64px;border-radius:16px;background:rgba(201,168,76,.2);border:2px solid rgba(201,168,76,.4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#c9a84c;font-family:'Playfair Display',serif">{{ u.iniciais }}</div>
+        <div>
+          <div style="font-size:20px;font-weight:700;font-family:'Playfair Display',serif">{{ u.nome_completo }}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.6);margin-top:3px">{{ u.label_perfil }} · {{ u.cargo|default:"OSM Microcrédito" }}</div>
+        </div>
+        <div style="margin-left:auto">
+          <div style="background:rgba(46,125,50,.2);border:1px solid rgba(46,125,50,.4);color:#81c784;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600"><i class="fa-solid fa-check"></i> Conta Criada</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:20px">
+        <div>
+          <div class="detail-row"><span class="detail-key">Email</span><span class="detail-val" style="font-size:12px">{{ u.email|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key">Telefone</span><span class="detail-val">{{ u.telefone|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key">NUIT</span><span class="detail-val">{{ u.nuit|default:"—" }}</span></div>
+        </div>
+        <div style="border-left:1px solid var(--border);padding-left:20px">
+          <div class="detail-row"><span class="detail-key">BI</span><span class="detail-val">{{ u.bi|default:"—" }}</span></div>
+          <div class="detail-row"><span class="detail-key">Perfil</span><span class="detail-val">{{ u.label_perfil }}</span></div>
+          <div class="detail-row"><span class="detail-key">Registo</span><span class="detail-val" style="font-size:11px">{% now "d/m/Y H:i" %}</span></div>
+        </div>
+      </div>
+
+      <!-- CREDENCIAIS DE ACESSO — DESTAQUE PRINCIPAL -->
+      <div style="background:linear-gradient(135deg,rgba(21,101,192,.06),rgba(201,168,76,.04));border:1.5px solid rgba(21,101,192,.2);border-radius:14px;padding:24px;margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          🔑 Credenciais de Acesso — CONFIDENCIAL
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Username</div>
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;letter-spacing:1px">{{ u.username }}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Password Inicial</div>
+            <div id="senha-val" style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;letter-spacing:1px">{{ senha }}</div>
+          </div>
+        </div>
+        <div style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12px;color:#7c5f00;line-height:1.6">
+          <i class="fa-solid fa-triangle-exclamation"></i> Entregue este documento ao utilizador em mão. Na primeira sessão será obrigatório trocar o username e a password. Destrua este documento após entrega.
+        </div>
+      </div>
+
+      {% if u.perfil == 'gestor' %}
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:12px">Permissões Atribuídas</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          {% for perm_name, perm_ok in perm_list %}
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:{% if perm_ok %}var(--success-l){% else %}var(--surface2){% endif %};border:1px solid {% if perm_ok %}rgba(46,125,50,.2){% else %}var(--border){% endif %}">
+            <span style="color:{% if perm_ok %}var(--success){% else %}var(--text3){% endif %}">{% if perm_ok %}<i class="fa-solid fa-check"></i>{% else %}✗{% endif %}</span>
+            <span style="font-size:11px;color:{% if perm_ok %}var(--success){% else %}var(--text3){% endif %}">{{ perm_name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div style="display:flex;gap:10px">
+        <a href="{% url 'utilizador_pdf' u.pk %}" class="btn btn-primary btn-full" target="_blank">⬇ Baixar Ficha em PDF</a>
+        <a href="{% url 'utilizadores' %}" class="btn btn-secondary">← Voltar</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

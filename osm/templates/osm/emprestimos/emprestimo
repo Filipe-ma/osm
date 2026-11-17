@@ -1,0 +1,326 @@
+{% extends "osm/base.html" %}
+{% load humanize %}
+
+{% block title %}Empréstimos — OSM{% endblock %}
+{% block nav_emprestimos %}active{% endblock %}
+{% block topbar_title %}Empréstimos{% endblock %}
+{% block topbar_sub %}{{ page.paginator.count }} contrato(s){% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'emprestimo_novo' %}" class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-plus"></i> Novo
+</a>
+<a href="{% url 'emprestimo_sem_conta' %}" class="btn btn-secondary btn-sm">
+  <i class="fa-solid fa-user-slash"></i> Sem Conta
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===== FILTROS RESPONSIVOS ===== */
+@media (max-width: 600px) {
+  form[method="get"] {
+    flex-direction: column;
+  }
+  form[method="get"] .form-control {
+    width: 100% !important;
+  }
+}
+
+/* ===== TABELA WRAP ===== */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table {
+  min-width: 700px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ===== MOBILE: TRANSFORMA TABELA EM CARDS ===== */
+@media (max-width: 768px) {
+  table {
+    min-width: auto;
+  }
+  table thead {
+    display: none;
+  }
+  table, table tbody, table tr, table td {
+    display: block;
+    width: 100%;
+  }
+  table tr {
+    background: var(--surface, #fff);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.05);
+  }
+  table td {
+    border: none;
+    padding: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 12px;
+  }
+  .td-progresso {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .progress-bar-wrap {
+    width: 100%;
+  }
+}
+
+/* ===== BADGES DE CRÉDITO ===== */
+.credito-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 2px 4px 2px 0;
+  white-space: nowrap;
+}
+.credito-badge i {
+  font-size: 11px;
+}
+.credito-badge.andamento {
+  background: rgba(255,193,7,0.15);
+  color: #856404;
+}
+.credito-badge.quitado {
+  background: rgba(25,135,84,0.12);
+  color: #198754;
+}
+
+/* ===== LINHA DETALHADA DE CRÉDITOS ===== */
+.credito-detalhe-row {
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+.credito-detalhe-row td {
+  padding: 12px 20px !important;
+}
+.credito-card-mini {
+  background: white;
+  border-radius: 12px;
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 180px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #e5e7eb;
+}
+.credito-card-mini .valor {
+  font-weight: 800;
+  font-size: 14px;
+  font-family: monospace;
+}
+.status-badge-mini {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #e9ecef;
+}
+.btn-olho-creditos {
+  transition: opacity 0.2s;
+}
+.btn-olho-creditos:hover {
+  color: #0d6efd !important;
+}
+.contagem-rapida {
+  font-size: 10px;
+  font-weight: normal;
+  margin-left: 4px;
+  background: #f1f3f5;
+  border-radius: 20px;
+  padding: 2px 6px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+  <input name="q" value="{{ q }}" placeholder="Buscar..." class="form-control" style="max-width:250px">
+  <select name="status" class="form-control" onchange="this.form.submit()">
+    <option value="">Estado</option>
+    {% for v,l in STATUS_CHOICES %}
+    <option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-filter"></i> Filtrar
+  </button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Contrato</th>
+          <th>Cliente</th>
+          <th>Total</th>
+          <th>Saldo</th>
+          <th>Progresso</th>
+          <th>Estado</th>
+          <th>Créditos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in page %}
+        <tr class="emprestimo-row" data-emp-pk="{{ e.pk }}" data-url="{% url 'emprestimo_detalhe' e.pk %}">
+          <td data-label="Contrato">{{ e.numero_contrato }}</td>
+          <td data-label="Cliente">
+            <strong>{{ e.nome }}</strong><br>
+            <small>{{ e.telefone }}</small>
+          </td>
+          <td data-label="Total">
+            <strong>{{ e.total_a_pagar|intcomma }} MT</strong>
+          </td>
+          <td data-label="Saldo">
+            {% if e.saldo_restante > 0 %}
+              <span style="color:#dc3545;font-weight:700">{{ e.saldo_restante|intcomma }} MT</span>
+            {% else %}
+              <span style="color:#198754;font-weight:700">0 MT</span>
+            {% endif %}
+          </td>
+          <td data-label="Progresso" class="td-progresso">
+            <div class="progress-bar-wrap" style="background:#eee;border-radius:20px;height:8px;overflow:hidden;width:100%">
+              <div style="height:8px; width:{{ e.progresso|floatformat:0 }}%; background:
+                {% if e.progresso >= 100 %}#198754{% elif e.progresso > 0 %}#ffc107{% else %}#6c757d{% endif %};">
+              </div>
+            </div>
+            <div style="font-size:11px;margin-top:4px">
+              {% if e.saldo_restante > 0 %}
+                <strong style="color:#dc3545;">Falta:</strong> MT {{ e.saldo_restante|floatformat:2|intcomma }}
+              {% else %}
+                <span style="color:#198754;">✓ Quitado</span>
+              {% endif %}
+            </div>
+          </td>
+          <td data-label="Estado">
+            {% with code=e.status_display.0 text=e.status_display.1 %}
+              {% if code == "quitado" %}
+                <span class="badge bg-success"><i class="fa-solid fa-circle-check"></i> {{ text }}</span>
+              {% elif code == "adiantado" %}
+                <span class="badge bg-info text-dark"><i class="fa-solid fa-bolt"></i> {{ text }}</span>
+              {% elif code == "andamento" %}
+                <span class="badge bg-warning text-dark"><i class="fa-solid fa-hourglass-half"></i> {{ text }}</span>
+              {% elif code == "aguardar" %}
+                <span class="badge bg-primary"><i class="fa-solid fa-clock"></i> {{ text }}</span>
+              {% elif code == "atraso" %}
+                <span class="badge bg-warning text-dark"><i class="fa-solid fa-exclamation"></i> {{ text }}</span>
+              {% elif code == "multa" %}
+                <span class="badge bg-danger"><i class="fa-solid fa-triangle-exclamation"></i> {{ text }}</span>
+              {% elif code == "tribunal" %}
+                <span class="badge bg-dark"><i class="fa-solid fa-scale-balanced"></i> {{ text }}</span>
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td data-label="Créditos">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              {% for cred in e.creditos.all %}
+                {% if forloop.counter <= 2 %}
+                  {% if not cred.esta_quitado %}
+                    <span class="credito-badge andamento" title="Em andamento: MT {{ cred.valor|floatformat:0 }} ({{ cred.taxa_juros }}%)">
+                      <i class="fa-solid fa-coins"></i> MT {{ cred.valor|floatformat:0 }}
+                    </span>
+                  {% else %}
+                    <span class="credito-badge quitado" title="Quitado: MT {{ cred.valor|floatformat:0 }}">
+                      <i class="fa-solid fa-check-circle"></i> MT {{ cred.valor|floatformat:0 }}
+                    </span>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+              {% if e.creditos.all|length > 2 %}
+                <span class="credito-badge" style="background:#e9ecef; color:#495057;">+{{ e.creditos.all|length|add:"-2" }}</span>
+              {% endif %}
+              <button type="button" class="btn-olho-creditos" style="background: none; border: none; cursor: pointer; padding: 0 4px; font-size: 16px; color: #6c757d;" data-emp-id="{{ e.pk }}" title="Ver detalhe dos créditos">
+                <i class="fa-regular fa-eye"></i> <span class="contagem-rapida" data-emp-id="{{ e.pk }}">carregando...</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding:40px">Nenhum empréstimo</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function atualizarContagemCredito(empId) {
+  const row = document.querySelector(`tr.emprestimo-row[data-emp-pk="${empId}"]`);
+  if (!row) return;
+  const badges = row.querySelectorAll('td[data-label="Créditos"] .credito-badge');
+  let andamento = 0, quitados = 0;
+  badges.forEach(badge => {
+    if (badge.classList.contains('andamento')) andamento++;
+    else if (badge.classList.contains('quitado')) quitados++;
+  });
+  const span = document.querySelector(`.contagem-rapida[data-emp-id="${empId}"]`);
+  if (span) span.textContent = `${andamento} em and. · ${quitados} quit.`;
+}
+
+document.querySelectorAll('tr.emprestimo-row').forEach(row => {
+  atualizarContagemCredito(row.getAttribute('data-emp-pk'));
+});
+
+async function toggleDetalheCredito(empId, btn) {
+  const row = document.querySelector(`tr.emprestimo-row[data-emp-pk="${empId}"]`);
+  if (!row) return;
+  let detalheRow = document.querySelector(`tr.detalhe-credito-row-${empId}`);
+  if (detalheRow) {
+    detalheRow.remove();
+    btn.style.opacity = '1';
+    return;
+  }
+  btn.style.opacity = '0.5';
+  try {
+    const response = await fetch(`/emprestimo/${empId}/creditos/detalhe/`);
+    if (!response.ok) throw new Error('Erro ao carregar detalhes');
+    const html = await response.text();
+    const newRow = document.createElement('tr');
+    newRow.className = `detalhe-credito-row-${empId} credito-detalhe-row`;
+    newRow.innerHTML = `<td colspan="7" style="padding:0!important">${html}</td>`;
+    row.insertAdjacentElement('afterend', newRow);
+  } catch (error) {
+    console.error(error);
+    alert('Não foi possível carregar os detalhes dos créditos.');
+  } finally {
+    btn.style.opacity = '1';
+  }
+}
+
+document.querySelectorAll('.btn-olho-creditos').forEach(btn => {
+  const empId = btn.getAttribute('data-emp-id');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleDetalheCredito(empId, btn);
+  });
+});
+
+document.querySelectorAll('tr.emprestimo-row').forEach(row => {
+  row.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-olho-creditos')) return;
+    const url = row.getAttribute('data-url');
+    if (url) window.location.href = url;
+  });
+});
+</script>
+
+{% endblock %}

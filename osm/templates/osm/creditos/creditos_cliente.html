@@ -1,0 +1,282 @@
+{% extends "osm/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ emp.numero_contrato }} — {{ emp.nome }}{% endblock %}
+{% block nav_emprestimos %}active{% endblock %}
+{% block topbar_title %}{{ emp.nome }}{% endblock %}
+{% block topbar_sub %}{{ emp.numero_contrato }} · {{ emp.get_status_display }}{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm"
+          hx-get="{% url 'adicionar_credito_form' emp.pk %}"
+          hx-target="#creditos-container"
+          hx-swap="innerHTML"
+          hx-indicator="#spinner-novo-credito">
+    <i class="fa-solid fa-plus"></i> Novo Crédito
+    <span id="spinner-novo-credito" class="htmx-indicator" style="display: none;">
+      <span class="btn-spin"></span>
+    </span>
+  </button>
+
+<a href="{% url 'emprestimos' %}" class="btn btn-success sm">← Voltar</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── MODALS (mantido apenas para outras modals que não a de crédito) ── */
+.osm-modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.55); z-index: 1050;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(3px); padding: 20px;
+}
+.osm-modal-backdrop.open { display: flex; }
+.osm-modal {
+  background: var(--surface); border-radius: 18px;
+  max-width: 460px; width: 100%;
+  box-shadow: 0 24px 60px rgba(0,0,0,.35);
+  animation: modalIn .25s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+@keyframes modalIn {
+  from { opacity:0; transform:translateY(24px) scale(.96); }
+  to   { opacity:1; transform:none; }
+}
+.osm-modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.osm-modal-header .modal-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.osm-modal-header .modal-title { font-size: 16px; font-weight: 700; }
+.osm-modal-header .modal-sub   { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.osm-modal-body   { padding: 20px 24px; }
+.osm-modal-footer {
+  padding: 14px 24px 20px;
+  display: flex; justify-content: flex-end; gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── HISTÓRICO ──────────────────────────────────────────── */
+.hist-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.hist-item:last-child { border: none; }
+.hist-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.hist-info { flex: 1; min-width: 0; }
+.hist-valor { font-family: var(--ff-mono); font-weight: 800; font-size: 15px; }
+.hist-meta  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.hist-tipo  { font-size: 11px; font-weight: 700; }
+
+/* ── CRÉDITOS ───────────────────────────────────────────── */
+.credito-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--surface2);
+  transition: all 0.2s ease;
+}
+.credito-item:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+.credito-header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.credito-valor {
+  font-weight: 800;
+  font-family: var(--ff-mono);
+  font-size: 16px;
+}
+.credito-status {
+  font-size: 11px;
+  font-weight: 700;
+}
+.credito-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 6px;
+}
+.progress-small {
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+/* ── TABS DE CRÉDITO ─────────────────────────────────────── */
+.cred-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 14px 16px 0;
+}
+.cred-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
+  border-radius: 10px 10px 0 0;
+  border: 2px solid var(--border);
+  border-bottom: none;
+  background: var(--surface2);
+  cursor: pointer;
+  font-size: 12px; font-weight: 600;
+  color: var(--text3);
+  transition: all .15s ease;
+  position: relative; bottom: -1px;
+}
+.cred-tab:hover { color: var(--text); background: var(--surface); }
+.cred-tab.active {
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-bottom-color: var(--surface);
+}
+.cred-tab .cred-tab-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; flex-shrink: 0;
+}
+.cred-tab.active .cred-tab-num { background: var(--accent); color: white; }
+.cred-tab .cred-tab-status { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── PAINEL DO CRÉDITO ──────────────────────────────────── */
+.cred-painel { display: none; }
+.cred-painel.active { display: block; }
+
+/* ── LIGHTBOX ────────────────────────────────────────────── */
+#lb { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999;
+      align-items:center; justify-content:center; flex-direction:column; }
+#lb.open { display:flex; }
+#lb img { max-width:88vw; max-height:84vh; border-radius:10px; object-fit:contain; }
+#lb-close { position:fixed; top:20px; right:24px; color:white; font-size:30px; cursor:pointer;
+             background:rgba(255,255,255,.15); border:none; border-radius:50%;
+             width:42px; height:42px; display:flex; align-items:center; justify-content:center; }
+#lb-caption { color:rgba(255,255,255,.65); font-size:12px; margin-top:10px; }
+#lb-nav { position:fixed; bottom:24px; display:flex; gap:10px; }
+#lb-nav button { background:rgba(255,255,255,.15); border:none; color:white;
+                  padding:8px 18px; border-radius:20px; font-size:13px; cursor:pointer; }
+.img-thumb { width:96px; height:96px; object-fit:cover; border-radius:9px;
+             border:2px solid var(--border); cursor:pointer; transition:all .2s; }
+.img-thumb:hover { border-color:var(--accent); transform:scale(1.06); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+
+  <div>
+    <!-- Painel principal de estado -->
+ <div class="card">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-title"><i class="fa-solid fa-coins" style="color: var(--accent);"></i> Créditos Vinculados</div>
+      </div>
+      <div class="card-body" id="creditos-container">
+        {% include "osm/includes/creditos_lista.html" with creditos_activos=creditos_activos creditos_quitados=creditos_quitados emp=emp %}
+      </div>
+    </div>
+
+
+<!-- LIGHTBOX -->
+<div id="lb" onclick="if(event.target===this)fecharLb()">
+  <button id="lb-close" onclick="fecharLb()" style="position:fixed;top:20px;right:24px;color:white;font-size:30px;cursor:pointer;background:rgba(255,255,255,.15);border:none;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center">&times;</button>
+  <img id="lb-img" src="" alt="" style="max-width:88vw;max-height:84vh;border-radius:10px;object-fit:contain">
+  <div id="lb-caption" style="color:rgba(255,255,255,.65);font-size:12px;margin-top:10px"></div>
+  <div id="lb-nav" style="position:fixed;bottom:24px;display:flex;gap:10px">
+    <button onclick="navLb(-1)" style="background:rgba(255,255,255,.15);border:none;color:white;padding:8px 18px;border-radius:20px;font-size:13px;cursor:pointer"><i class="fa-solid fa-chevron-left"></i> Ant.</button>
+    <button onclick="navLb(1)" style="background:rgba(255,255,255,.15);border:none;color:white;padding:8px 18px;border-radius:20px;font-size:13px;cursor:pointer">Próx. <i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+</div>
+<script>
+// ─── SELECTOR DE CRÉDITO ─────────────────────────────
+window.selectCred = function(idx, btn) {
+  document.querySelectorAll('.cred-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.cred-painel').forEach(p => p.classList.remove('active'));
+  const p = document.getElementById('painel-' + idx);
+  if (p) p.classList.add('active');
+};
+
+// ─── LIGHTBOX ─────────────────────────────────────────
+(function() {
+  const lbImgs = [];
+  let lbIdx = 0;
+  document.addEventListener('DOMContentLoaded', function() {
+    // Lightbox
+    document.querySelectorAll('.img-thumb').forEach(function(img, i) {
+      lbImgs.push({ src: img.src, caption: img.alt || '' });
+      img.addEventListener('click', function() {
+        lbIdx = i;
+        document.getElementById('lb-img').src = img.src;
+        document.getElementById('lb-caption').textContent = img.alt || '';
+        document.getElementById('lb').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    var lbNav = document.getElementById('lb-nav');
+    if (lbNav && lbImgs.length <= 1) lbNav.style.display = 'none';
+  });
+  window.fecharLb = function() {
+    document.getElementById('lb').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+  window.navLb = function(dir) {
+    lbIdx = (lbIdx + dir + lbImgs.length) % lbImgs.length;
+    document.getElementById('lb-img').src = lbImgs[lbIdx].src;
+    document.getElementById('lb-caption').textContent = lbImgs[lbIdx].caption;
+  };
+  document.addEventListener('keydown', function(e) {
+    var lb = document.getElementById('lb');
+    if (!lb || !lb.classList.contains('open')) return;
+    if (e.key === 'Escape') window.fecharLb();
+    if (e.key === 'ArrowLeft') window.navLb(-1);
+    if (e.key === 'ArrowRight') window.navLb(1);
+  });
+})();
+window.fecharModal = function(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.remove('open');
+};
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('osm-modal-backdrop')) {
+    window.fecharModal(e.target.id);
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.osm-modal-backdrop.open').forEach(m => window.fecharModal(m.id));
+  }
+});
+
+// Pequeno ajuste para que o botão "Novo Crédito" mostre correctamente o spinner via classe .htmx-request
+document.body.addEventListener('htmx:beforeRequest', function(evt) {
+  if (evt.target.closest('[hx-get*="adicionar_credito_form"]')) {
+    const btn = evt.target.closest('.btn');
+    if (btn) btn.classList.add('htmx-request');
+  }
+});
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+  if (evt.target.closest('[hx-get*="adicionar_credito_form"]')) {
+    const btn = evt.target.closest('.btn');
+    if (btn) btn.classList.remove('htmx-request');
+  }
+});
+</script>
+{% endblock %}

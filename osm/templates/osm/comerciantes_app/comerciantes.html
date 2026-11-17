@@ -1,0 +1,81 @@
+{% extends "osm/base.html" %}
+{% load humanize %}
+{% block title %}Comerciantes — OSM{% endblock %}
+{% block nav_comerciantes %}active{% endblock %}
+{% block topbar_title %}Comerciantes{% endblock %}
+{% block topbar_sub %}{{ lista|length }} comerciante(s){% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'comerciante_novo' %}" class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-plus"></i> Novo Comerciante
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 768px) {
+  table thead { display: none; }
+  table, table tbody, table tr, table td { display: block; width: 100%; }
+  table tr {
+    background: var(--surface, #fff);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.05);
+  }
+  table td { border: none; padding: 6px 0; display: flex; justify-content: space-between; gap: 10px; }
+  table td::before { content: attr(data-label); font-weight: 600; color: #6b7280; font-size: 12px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Comerciante</th>
+          <th>Nº de Créditos</th>
+          <th>Em Dívida</th>
+          <th>Quitados</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in lista %}
+        <tr onclick="location.href='{% url 'creditos_comerciante' c.pk %}'" style="cursor:pointer">
+
+          <td data-label="Comerciante">
+            <strong>{{ c.nome }}</strong><br>
+            <small>{{ c.tipo_comercio }} · {{ c.telefone|default:"—" }}</small>
+          </td>
+
+          <td data-label="Nº de Créditos">
+            {{ c.total_creditos|default:"1" }}
+          </td>
+
+          <td data-label="Em Dívida" class="text-danger fw-bold">
+            {{ c.num_creditos_ativos|default:"0" }}
+          </td>
+
+          <td data-label="Quitados" class="text-success fw-bold">
+            {{ c.num_creditos_quitados|default:"0" }}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="text-align:center;padding:60px;color:var(--text3)">
+            <div style="font-size:28px;margin-bottom:10px"><i class="fa-solid fa-store"></i></div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum comerciante</div>
+            <a href="{% url 'comerciante_novo' %}" class="btn btn-primary btn-sm">Registar Primeiro</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

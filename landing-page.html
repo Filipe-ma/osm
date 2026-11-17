@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iun ia — Soluções Digitais Inteligentes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#eef2ff', 100:'#e0e7ff', 200:'#c7d2fe', 500:'#6366f1', 600:'#4f46e5', 700:'#4338ca', 800:'#3730a3', 900:'#312e81' },
+            teal: { 600:'#0d9488', 700:'#0f766e' }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    .service-card:hover .service-icon { transform:scale(1.08); }
+    .service-card { transition: box-shadow .25s, transform .25s; }
+    .service-card:hover { transform:translateY(-4px); box-shadow:0 25px 50px -12px rgba(0,0,0,.12); }
+    .faq-a { max-height:0; overflow:hidden; transition: max-height .35s ease; }
+    .faq-q.open + .faq-a { max-height:300px; }
+    @keyframes float { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-8px) } }
+    .float { animation: float 3s ease-in-out infinite; }
+    @keyframes slideUp { from{ opacity:0; transform:translateY(30px) } to{ opacity:1; transform:translateY(0) } }
+    .slide-up { animation: slideUp .6s ease-out both; }
+    .slide-up:nth-child(2) { animation-delay:.1s }
+    .slide-up:nth-child(3) { animation-delay:.2s }
+    .slide-up:nth-child(4) { animation-delay:.3s }
+    .slide-up:nth-child(5) { animation-delay:.4s }
+    .slide-up:nth-child(6) { animation-delay:.5s }
+    .slide-up:nth-child(7) { animation-delay:.6s }
+    .slide-up:nth-child(8) { animation-delay:.7s }
+  </style>
+</head>
+<body class="font-sans text-gray-900 bg-white">
+
+<!-- ===================== NAV ===================== -->
+<nav class="fixed top-0 w-full bg-white/90 backdrop-blur-lg z-50 border-b border-gray-100">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="#top" class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-lg bg-brand-600 text-white flex items-center justify-center text-sm font-bold">ia</div>
+        <span class="text-xl font-extrabold tracking-tight text-gray-900">iun<span class="text-brand-600"> ia</span></span>
+      </a>
+      <ul class="hidden md:flex items-center gap-8">
+        <li><a href="#servicos" class="text-sm font-medium text-gray-500 hover:text-brand-600 transition">Serviços</a></li>
+        <li><a href="#dominios" class="text-sm font-medium text-gray-500 hover:text-brand-600 transition">Domínios</a></li>
+        <li><a href="#planos" class="text-sm font-medium text-gray-500 hover:text-brand-600 transition">Planos</a></li>
+        <li><a href="#faq" class="text-sm font-medium text-gray-500 hover:text-brand-600 transition">FAQ</a></li>
+        <li><a href="#contato" class="text-sm font-medium text-gray-500 hover:text-brand-600 transition">Contato</a></li>
+      </ul>
+      <a href="#contato" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition">
+        <i class="fa-solid fa-rocket"></i> Começar
+      </a>
+
+      <!-- mobile toggle -->
+      <button onclick="document.getElementById('mob').classList.toggle('hidden')" class="md:hidden text-gray-600 text-xl">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+    <div id="mob" class="hidden md:hidden pb-4 space-y-2">
+      <a href="#servicos" class="block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Serviços</a>
+      <a href="#dominios" class="block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Domínios</a>
+      <a href="#planos" class="block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Planos</a>
+      <a href="#faq" class="block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">FAQ</a>
+      <a href="#contato" class="block px-4 py-2 rounded-lg text-sm bg-brand-600 text-white text-center font-semibold">Começar</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<section id="top" class="pt-28 pb-20 lg:pt-36 lg:pb-28">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <!-- badge -->
+    <div class="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full px-4 py-1.5 mb-6 slide-up">
+      <i class="fa-solid fa-sparkles"></i> Plataforma 100% potenciada por IA
+    </div>
+
+    <h1 class="text-4xl sm:text-5xl lg:text-[3.6rem] font-black leading-[1.1] tracking-tight max-w-4xl mx-auto slide-up">
+      Tecnologia e inteligência artificial para
+      <span class="text-brand-600 underline decoration-4 underline-offset-4 decoration-brand-200">escalar
+      o seu negócio</span> digital
+    </h1>
+
+    <p class="max-w-2xl mx-auto mt-6 text-lg text-gray-500 slide-up">
+      Domínios, hospedagem, SMS e WhatsApp em massa, chatbots com IA, Voz sobre IP,
+      marketing digital e desenvolvimento de software — tudo numa só plataforma: <strong class="text-gray-700">iun ia</strong>.
+    </p>
+
+    <div class="flex flex-wrap justify-center gap-3 mt-8 slide-up">
+      <a href="#contato" class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition text-sm shadow-lg shadow-brand-500/20">
+        <i class="fa-solid fa-paper-plane"></i> Falar com Especialista
+      </a>
+      <a href="#servicos" class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition text-sm">
+        <i class="fa-solid fa-grid-2"></i> Ver Serviços
+      </a>
+    </div>
+
+    <!-- trust bar -->
+    <div class="flex flex-wrap justify-center items-center gap-8 mt-14 text-gray-300 slide-up">
+      <span class="text-xs font-semibold tracking-widest uppercase">Confiado por</span>
+      <i class="fa-brands fa-aws text-2xl"></i>
+      <i class="fa-brands fa-google text-2xl"></i>
+      <i class="fa-brands fa-meta text-2xl"></i>
+      <i class="fa-brands fa-whatsapp text-2xl"></i>
+      <i class="fa-brands fa-cloudflare text-2xl"></i>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== DOMAINS SEARCH ===================== -->
+<section id="dominios" class="py-20 bg-gray-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <span class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 text-xs font-semibold rounded-full px-3 py-1 mb-4">
+      <i class="fa-solid fa-magnifying-glass"></i> Pesquisa de Domínios
+    </span>
+    <h2 class="text-3xl font-extrabold">Encontre o domínio <span class="text-brand-600">perfeito</span></h2>
+    <p class="mt-3 text-gray-500 max-w-lg mx-auto">Verifique a disponibilidade de mais de 500 extensões de domínio e registe-o em segundos.</p>
+
+    <!-- search form -->
+    <form hx-post="/api/domains/search" hx-target="#domain-results" hx-indicator="#spinner" class="mt-8">
+      <div class="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
+        <div class="flex-1 relative">
+          <i class="fa-solid fa-globe absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input type="text" name="domain" placeholder="exemplo.com" required
+                 class="w-full pl-11 pr-4 py-4 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+        </div>
+        <select name="tld" class="px-4 py-4 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <option>.com</option>
+          <option>.co.ao</option>
+          <option>.pt</option>
+          <option>.org</option>
+          <option>.net</option>
+          <option>.io</option>
+          <option>.dev</option>
+          <option>.app</option>
+        </select>
+        <button type="submit" class="px-6 py-4 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-magnifying-glass"></i> Pesquisar
+        </button>
+      </div>
+    </form>
+
+    <!-- spinner -->
+    <div id="spinner" class="htmx-indicator hidden mt-6">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand-600 text-2xl"></i>
+    </div>
+
+    <!-- results target -->
+    <div id="domain-results" class="mt-8 text-left">
+      <!-- HTMX vai injetar os resultados aqui -->
+      <!-- Example static content for demo -->
+      <div class="bg-white rounded-xl border border-gray-200 divide-y">
+        <div class="flex items-center justify-between p-4">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-green-500 text-lg"></i>
+            <span class="font-semibold">exemplo.com</span>
+            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Disponível</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="text-gray-500 text-sm">R$ 39,90<span class="text-gray-400">/ano</span></span>
+            <button class="px-4 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition">Registar</button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between p-4">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-green-500 text-lg"></i>
+            <span class="font-semibold">exemplo.co.ao</span>
+            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Disponível</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="text-gray-500 text-sm">R$ 89,90<span class="text-gray-400">/ano</span></span>
+            <button class="px-4 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition">Registar</button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between p-4">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-xmark text-red-400 text-lg"></i>
+            <span class="font-semibold text-gray-400">exemplo.net</span>
+            <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">Indisponível</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <button class="text-xs text-brand-600 font-semibold hover:underline">Sugerir alternativa</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SERVICES ===================== -->
+<section id="servicos" class="py-24">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <span class="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full px-3 py-1"><i class="fa-solid fa-cubes"></i> O que fazemos</span>
+      <h2 class="mt-4 text-3xl font-extrabold">Serviços sob medida para crescer</h2>
+      <p class="mt-3 text-gray-500 max-w-xl mx-auto">Da infrastructura ao marketing, a iun ia resolve tudo para que você foque no que importa.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-solid fa-globe"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">Registo de Domínios</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Mais de 500 TLDs disponíveis. Gestão DNS integrada, protecção de privacidade Whois e SSL grátis.</p>
+        <a href="#dominios" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Pesquisar</a>
+      </div>
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-solid fa-server"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">Hospedagem Web</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Shared, VPS e Dedicados. SSD NVMe, painel cPanel, backups automáticos e uptime 99,9%.</p>
+        <a href="#planos" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Ver planos</a>
+      </div>
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-solid fa-sms"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">SMS Bulk</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Envio em massa via API ou painel. Relatórios de entrega, agendamento e segmentação por lista.</p>
+        <a href="#contato" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Solicitar</a>
+      </div>
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-brands fa-whatsapp"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">WhatsApp & Chatbot IA</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Chatbots inteligentes para suporte e vendas. NLP avançado, integração com CRM e respostas 24/7.</p>
+        <a href="#contato" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Demo</a>
+      </div>
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-solid fa-phone-volume"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">Bulk Voice IP</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Campanhas de voz automáticas para alertas, lembretes e notificações em larga escala.</p>
+        <a href="#contato" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Saber mais</a>
+      </div>
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-solid fa-bullhorn"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">Marketing Digital</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Google Ads, Meta Ads, SEO, e-mail marketing e estratégia de conteúdos com dados e resultados.</p>
+        <a href="#contato" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Orçamento</a>
+      </div>
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-solid fa-code"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">Desenvolvimento de Software</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Aplicações web/mobile, APIs REST, SaaS e integração de IA nos seus sistemas existentes.</p>
+        <a href="#contato" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Projecto</a>
+      </div>
+
+      <div class="service-card group bg-white border border-gray-100 rounded-2xl p-7 transition">
+        <div class="service-icon w-14 h-14 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center text-xl transition-transform">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <h3 class="mt-5 text-base font-bold">Websites com IA</h3>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Criação de sites modernos e responsivos potenciada por IA. Design, copy e SEO automáticos.</p>
+        <a href="#contato" class="mt-4 inline-flex items-center gap-1 text-sm text-brand-600 font-semibold hover:gap-2 transition-all"><i class="fa-solid fa-arrow-right"></i> Criar site</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===================== STATS ===================== -->
+<section class="py-16 border-y border-gray-100">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-10 text-center">
+      <div>
+        <div class="text-4xl font-black text-brand-600"><i class="fa-solid fa-users text-sm inline-align-middle mr-1"></i> 5000+</div>
+        <div class="mt-1 text-sm text-gray-500 font-medium">Clientes activos</div>
+      </div>
+      <div>
+        <div class="text-4xl font-black text-brand-600">15M+</div>
+        <div class="mt-1 text-sm text-gray-500 font-medium">Mensagens enviadas</div>
+      </div>
+      <div>
+        <div class="text-4xl font-black text-brand-600">99,9%</div>
+        <div class="mt-1 text-sm text-gray-500 font-medium">Uptime garantido</div>
+      </div>
+      <div>
+        <div class="text-4xl font-black text-brand-600">24/7</div>
+        <div class="mt-1 text-sm text-gray-500 font-medium">Suporte técnico</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FEATURES ===================== -->
+<section class="py-24 bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+      <div>
+        <span class="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full px-3 py-1"><i class="fa-solid fa-bolt"></i> Porquê a iun ia</span>
+        <h2 class="mt-4 text-3xl font-extrabold">Infraestrutura de nível mundial, suporte local</h2>
+        <p class="mt-4 text-gray-500 leading-relaxed">Combinamos a melhor infra-estrutura global com conhecimento profundo do mercado africano e brasileiro.</p>
+        <ul class="mt-8 space-y-4">
+          <li class="flex items-start gap-3">
+            <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs"><i class="fa-solid fa-check"></i></span>
+            <div><strong class="text-sm">Servidores de alta performance</strong><p class="text-sm text-gray-500">SSD NVMe, rede 10Gbps, CDN global com Cloudflare</p></div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs"><i class="fa-solid fa-check"></i></span>
+            <div><strong class="text-sm">APIs REST completas</strong><p class="text-sm text-gray-500">Integre SMS, WhatsApp e Voice nos seus sistemas com nossa API documentada</p></div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs"><i class="fa-solid fa-check"></i></span>
+            <div><strong class="text-sm">Chatbots com IA conversacional</strong><p class="text-sm text-gray-500">Modelos NLP treinados para português de Angola e Brasil</p></div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs"><i class="fa-solid fa-check"></i></span>
+            <div><strong class="text-sm">Painel de gestão unificado</strong><p class="text-sm text-gray-500">Controla todos os seus serviços num único dashboard intuitivo</p></div>
+          </li>
+        </ul>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg">
+        <div class="space-y-6">
+          <!-- mock stats cards -->
+          <div class="flex items-center gap-4">
+            <div class="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div class="flex items-center justify-between"><span class="text-xs text-gray-500">SMS Enviados</span><i class="fa-solid fa-chart-line text-green-500"></i></div>
+              <div class="text-2xl font-extrabold mt-1">234.580</div>
+              <div class="text-xs text-green-600 font-semibold"><i class="fa-solid fa-arrow-up"></i> 24% este mês</div>
+            </div>
+            <div class="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div class="flex items-center justify-between"><span class="text-xs text-gray-500">Chatbot activo</span><i class="fa-brands fa-whatsapp text-green-500"></i></div>
+              <div class="text-2xl font-extrabold mt-1">1.847</div>
+              <div class="text-xs text-green-600 font-semibold"><i class="fa-solid fa-arrow-up"></i> 543 conversas hoje</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div class="flex items-center justify-between"><span class="text-xs text-gray-500">Uptime</span><i class="fa-solid fa-shield-check text-brand-600"></i></div>
+              <div class="text-2xl font-extrabold mt-1">99,99%</div>
+              <div class="text-xs text-gray-400">Últimos 90 dias</div>
+            </div>
+            <div class="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div class="flex items-center justify-between"><span class="text-xs text-gray-500">Domains</span><i class="fa-solid fa-globe text-brand-600"></i></div>
+              <div class="text-2xl font-extrabold mt-1">52</div>
+              <div class="text-xs text-gray-400">7 expiram em breve</div>
+            </div>
+          </div>
+
+          <!-- mock voice activity -->
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-bold"><i class="fa-solid fa-headset mr-1 text-brand-600"></i> Voice Campaign</span>
+              <button class="flex items-center gap-1 text-xs bg-green-500 text-white px-3 py-1 rounded-lg font-semibold"><i class="fa-solid fa-play"></i> Active</button>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between"><span class="text-xs text-gray-500">Calls completadas</span><span class="text-sm font-bold">4.298</span></div>
+              <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-brand-600 h-2 rounded-full" style="width:78%"></div></div>
+              <div class="flex items-center justify-between text-xs text-gray-400"><span>Progresso</span><span>78% de 5.500</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PRICING ===================== -->
+<section id="planos" class="py-24">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <span class="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full px-3 py-1"><i class="fa-solid fa-tag"></i> Preços</span>
+      <h2 class="mt-4 text-3xl font-extrabold">Planos para cada fase</h2>
+      <p class="mt-3 text-gray-500 max-w-xl mx-auto">Escolha o plano ideal, ou crie o seu pacote personalizado.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+
+      <!-- Starter -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-8 transition hover:border-gray-300">
+        <div class="flex items-center gap-2 mb-2"><i class="fa-solid fa-seedling text-green-600"></i><span class="text-sm font-bold text-gray-500">Starter</span></div>
+        <div class="text-4xl font-extrabold">R$ 49<span class="text-base font-medium text-gray-400">/mês</span></div>
+        <a href="#contato" class="mt-6 block w-full py-3 rounded-lg border border-gray-200 text-sm font-semibold text-center hover:bg-gray-50 transition">Escolher Plano</a>
+        <ul class="mt-6 space-y-3 text-sm text-gray-600">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> 1 Domínio grátis</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Hospedagem partilhada</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> 500 SMS/mês</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Chatbot básico WhatsApp</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Certificado SSL</li>
+          <li class="flex items-center gap-2 text-gray-300"><i class="fa-solid fa-minus"></i> Voice IP</li>
+          <li class="flex items-center gap-2 text-gray-300"><i class="fa-solid fa-minus"></i> Marketing</li>
+        </ul>
+      </div>
+
+      <!-- Business -->
+      <div class="bg-brand-600 text-white rounded-2xl p-8 relative shadow-2xl shadow-brand-500/30">
+        <span class="absolute -top-3 right-6 bg-yellow-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-star mr-1"></i>Mais Popular</span>
+        <div class="flex items-center gap-2 mb-2"><i class="fa-solid fa-briefcase text-yellow-300"></i><span class="text-sm font-bold text-brand-200">Business</span></div>
+        <div class="text-4xl font-extrabold">R$ 149<span class="text-base font-medium text-brand-300">/mês</span></div>
+        <a href="#contato" class="mt-6 block w-full py-3 rounded-lg bg-white text-brand-700 text-sm font-bold text-center hover:bg-gray-50 transition shadow">Escolher Plano</a>
+        <ul class="mt-6 space-y-3 text-sm text-brand-100">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-300"></i> 3 Domínios grátis</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-300"></i> Hospedagem VPS</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-300"></i> 10.000 SMS/mês</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-300"></i> Chatbot IA avançado</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-300"></i> Voice IP incluído</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-300"></i> Marketing digital básico</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-300"></i> Suporte prioritário</li>
+        </ul>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-8 transition hover:border-gray-300">
+        <div class="flex items-center gap-2 mb-2"><i class="fa-solid fa-building text-brand-600"></i><span class="text-sm font-bold text-gray-500">Enterprise</span></div>
+        <div class="text-4xl font-extrabold">Custom</div>
+        <a href="#contato" class="mt-6 block w-full py-3 rounded-lg border border-gray-200 text-sm font-semibold text-center hover:bg-gray-50 transition">Falar Connosco</a>
+        <ul class="mt-6 space-y-3 text-sm text-gray-600">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Domínios ilimitados</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Servidor dedicado</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> SMS e voz ilimitados</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Chatbot IA personalizado</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Software sob medida</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Marketing completo</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Account manager</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TESTIMONIALS ===================== -->
+<section class="py-24 bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <span class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 text-xs font-semibold rounded-full px-3 py-1"><i class="fa-solid fa-heart"></i> Clientes</span>
+      <h2 class="mt-4 text-3xl font-extrabold">O que dizem os nossos clientes</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-white rounded-2xl p-7 border border-gray-100">
+        <div class="flex gap-1 text-yellow-400 text-sm mb-4">
+          <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+        </div>
+        <p class="text-sm text-gray-600 leading-relaxed">"O chatbot da iun ia reduziu o nosso tempo de resposta de 4 horas para 30 segundos. Resultados impressionantes."</p>
+        <div class="flex items-center gap-3 mt-5">
+          <div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm">MA</div>
+          <div><div class="text-sm font-bold">Maria Alves</div><div class="text-xs text-gray-400">CEO — TechAngola</div></div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-7 border border-gray-100">
+        <div class="flex gap-1 text-yellow-400 text-sm mb-4">
+          <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+        </div>
+        <p class="text-sm text-gray-600 leading-relaxed">"A SMS bulk da iun ia atingiu 98% de taxa de entrega. A melhor plataforma que já utilizei em Angola."</p>
+        <div class="flex items-center gap-3 mt-5">
+          <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm">JS</div>
+          <div><div class="text-sm font-bold">João Santos</div><div class="text-xs text-gray-400">Marketing — Banco Fiança</div></div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-7 border border-gray-100">
+        <div class="flex gap-1 text-yellow-400 text-sm mb-4">
+          <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+        </div>
+        <p class="text-sm text-gray-600 leading-relaxed">"Criaram o nosso e-commerce em 2 semanas com IA. O site ficou lindo e as vendas triplicaram."</p>
+        <div class="flex items-center gap-3 mt-5">
+          <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm">CF</div>
+          <div><div class="text-sm font-bold">Carla Fernandes</div><div class="text-xs text-gray-400">Fundadora — Moda Luanda</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section id="faq" class="py-24">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-14">
+      <span class="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full px-3 py-1"><i class="fa-solid fa-circle-question"></i> FAQ</span>
+      <h2 class="mt-4 text-3xl font-extrabold">Perguntas Frequentes</h2>
+    </div>
+    <div class="space-y-4">
+
+      <div class="faq-q cursor-pointer bg-gray-50 rounded-xl p-5 flex items-center justify-between group" onclick="this.classList.toggle('open')">
+        <span class="text-sm font-semibold pr-4">Como funciona o chatbot de WhatsApp com IA?</span>
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform group-[.open]:rotate-180"></i>
+      </div>
+      <div class="faq-a bg-gray-50 rounded-b-xl px-5 text-sm text-gray-500 leading-relaxed">
+        <div class="pb-5">Nosso chatbot utiliza processamento de linguagem natural para entender e responder seus clientes no WhatsApp 24 horas por dia. Você pode configurá-lo para responder perguntas frequentes, agendar atendimentos, fazer vendas e integrar com seu CRM existente.</div>
+      </div>
+
+      <div class="faq-q cursor-pointer bg-gray-50 rounded-xl p-5 flex items-center justify-between group" onclick="this.classList.toggle('open')">
+        <span class="text-sm font-semibold pr-4">Qual o alcance do SMS Bulk? Funciona internacionalmente?</span>
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform group-[.open]:rotate-180"></i>
+      </div>
+      <div class="faq-a bg-gray-50 rounded-b-xl px-5 text-sm text-gray-500 leading-relaxed">
+        <div class="pb-5">Sim! Nosso serviço de SMS Bulk opera em mais de 200 países. Temos conectividade directa com operadoras em Angola, Brasil, Moçambique e toda a CPLP, garantindo alta taxa de entrega e preços competitivos.</div>
+      </div>
+
+      <div class="faq-q cursor-pointer bg-gray-50 rounded-xl p-5 flex items-center justify-between group" onclick="this.classList.toggle('open')">
+        <span class="text-sm font-semibold pr-4">Quanto tempo demora o desenvolvimento de um site com IA?</span>
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform group-[.open]:rotate-180"></i>
+      </div>
+      <div class="faq-a bg-gray-50 rounded-b-xl px-5 text-sm text-gray-500 leading-relaxed">
+        <div class="pb-5">Com a nossa plataforma IA, um site básico pode estar no ar em menos de 24 horas. Para projectos mais complexos como e-commerce ou aplicações web, o prazo médio é de 2 a 4 semanas, dependendo da complexidade.</div>
+      </div>
+
+      <div class="faq-q cursor-pointer bg-gray-50 rounded-xl p-5 flex items-center justify-between group" onclick="this.classList.toggle('open')">
+        <span class="text-sm font-semibold pr-4">Há um período mínimo de fidelização nos planos?</span>
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform group-[.open]:rotate-180"></i>
+      </div>
+      <div class="faq-a bg-gray-50 rounded-b-xl px-5 text-sm text-gray-500 leading-relaxed">
+        <div class="pb-5">Não! Nossos planos são mensais e sem fidelização. Você pode fazer upgrade, downgrade ou cancelar a qualquer momento. Para planos Enterprise, estabelecemos contratos personalizados de acordo com a demanda.</div>
+      </div>
+
+      <div class="faq-q cursor-pointer bg-gray-50 rounded-xl p-5 flex items-center justify-between group" onclick="this.classList.toggle('open')">
+        <span class="text-sm font-semibold pr-4">O serviço de Voice IP funciona em todos os países?</span>
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform group-[.open]:rotate-180"></i>
+      </div>
+      <div class="faq-a bg-gray-50 rounded-b-xl px-5 text-sm text-gray-500 leading-relaxed">
+        <div class="pb-5">Voice IP está disponível em mais de 80 países. Trabalhamos com provedores locais para garantir qualidade de ligação e conformidade regulamentar em cada país. Consulte-nos para verificar a disponibilidade no seu mercado.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CTA / CONTACT ===================== -->
+<section id="contato" class="py-24 border-t border-gray-100">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <div class="bg-brand-600 rounded-3xl p-12 lg:p-16 shadow-2xl shadow-brand-600/20">
+      <i class="fa-solid fa-rocket text-3xl text-brand-300 mb-5"></i>
+      <h2 class="text-3xl font-extrabold text-white">Pronto para começar?</h2>
+      <p class="mt-4 text-brand-200 max-w-md mx-auto">Faça parte das milhares de empresas que confiam na iun ia para crescer no mundo digital.</p>
+      <form hx-post="/api/contact" hx-target="#contact-feedback" class="mt-8 space-y-3 max-w-md mx-auto">
+        <div class="flex gap-2">
+          <input type="text" name="name" placeholder="Seu nome" required
+                 class="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-white">
+          <input type="email" name="email" placeholder="E-mail" required
+                 class="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-white">
+        </div>
+        <textarea name="message" rows="3" placeholder="Como podemos ajudar?"
+                  class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-white resize-none"></textarea>
+        <button type="submit" class="w-full py-3 rounded-lg bg-white text-brand-700 font-bold text-sm hover:bg-gray-50 transition shadow-lg">
+          <i class="fa-solid fa-paper-plane mr-1"></i> Enviar Mensagem
+        </button>
+      </form>
+      <div id="contact-feedback" class="mt-3 text-sm text-white"></div>
+    </div>
+
+    <div class="mt-12 flex flex-wrap justify-center gap-4">
+      <a href="https://wa.me/" target="_blank" class="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition">
+        <i class="fa-brands fa-whatsapp text-green-600 text-lg"></i> WhatsApp
+      </a>
+      <a href="tel:+244000000000" class="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition">
+        <i class="fa-solid fa-phone text-brand-600"></i> +244 000 000 000
+      </a>
+      <a href="mailto:contacto@iunia.com" class="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition">
+        <i class="fa-solid fa-envelope text-red-500"></i> contacto@iunia.com
+      </a>
+      <a href="#" class="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition">
+        <i class="fa-brands fa-instagram text-pink-500"></i> @iunia_official
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="py-16 border-t border-gray-100 bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-10">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center text-xs font-bold">ia</div>
+          <span class="text-lg font-extrabold">iun<span class="text-brand-600"> ia</span></span>
+        </div>
+        <p class="text-sm text-gray-500 leading-relaxed">Soluções digitais inteligentes para empresas que querem crescer com tecnologia e IA.</p>
+        <div class="flex gap-3 mt-5">
+          <a href="#" class="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-brand-600 hover:text-white transition"><i class="fa-brands fa-facebook-f text-sm"></i></a>
+          <a href="#" class="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-brand-600 hover:text-white transition"><i class="fa-brands fa-instagram text-sm"></i></a>
+          <a href="#" class="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-brand-600 hover:text-white transition"><i class="fa-brands fa-linkedin-in text-sm"></i></a>
+          <a href="#" class="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-brand-600 hover:text-white transition"><i class="fa-brands fa-x-twitter text-sm"></i></a>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-sm font-bold mb-4">Serviços</h4>
+        <ul class="space-y-2.5 text-sm text-gray-500">
+          <li><a href="#" class="hover:text-brand-600 transition">Domínios</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Hospedagem</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">SMS Bulk</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">WhatsApp IA</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Voice IP</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Software</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-sm font-bold mb-4">Empresa</h4>
+        <ul class="space-y-2.5 text-sm text-gray-500">
+          <li><a href="#" class="hover:text-brand-600 transition">Sobre nós</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Blog</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Carreiras</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Parceiros</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Termos</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Privacidade</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-sm font-bold mb-4">Suporte</h4>
+        <ul class="space-y-2.5 text-sm text-gray-500">
+          <li><a href="#" class="hover:text-brand-600 transition">Central de Ajuda</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Documentação API</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Status</a></li>
+          <li><a href="#" class="hover:text-brand-600 transition">Contacto</a></li>
+        </ul>
+        <div class="mt-5 flex items-center gap-2 text-sm text-gray-400">
+          <i class="fa-solid fa-shield-halved text-green-500"></i>
+          <span>SSL protegido</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-8 border-t border-gray-100 text-center text-sm text-gray-400">
+      <p>2026 <strong class="text-gray-600">iun ia</strong>. Todos os direitos reservados.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

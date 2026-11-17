@@ -1,0 +1,254 @@
+{% extends "osm/base2.html" %}
+{% load humanize %}
+{% block title %}Minha Conta — OSM{% endblock %}
+{% block topbar_title %}Portal do Cliente{% endblock %}
+{% block topbar_sub %}{{ request.user.nome_completo }}{% endblock %}
+{% block topbar_actions %}
+{% if not tem_tribunal %}
+<a href="{% url 'requisicao_nova' %}" {% if not request.user.pode_solicitar %}style="pointer-events:none;opacity:.4" title="{{ request.user.motivo_bloqueio_requisicao }}"{% endif %} class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-plus"></i> Novo Pedido
+</a>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.welcome-card {
+  background: linear-gradient(135deg,#0a1628 0%,#1e3a5f 60%,#1565c0 100%);
+  border:none; margin-bottom:22px; position:relative; overflow:hidden;
+}
+.welcome-card::before {
+  content:''; position:absolute; top:-50px; right:-50px;
+  width:220px; height:220px; border-radius:50%;
+  background:radial-gradient(circle,rgba(201,168,76,.18) 0%,transparent 70%);
+}
+.avatar-circle {
+  width:58px; height:58px; border-radius:14px;
+  background:rgba(201,168,76,.15); border:1.5px solid rgba(201,168,76,.35);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:700; color:var(--gold);
+  font-family:'Playfair Display',serif; flex-shrink:0;
+}
+.emp-card {
+  border:1.5px solid var(--border); border-radius:12px;
+  padding:18px; margin-bottom:12px; background:var(--surface);
+  transition:border-color .2s, box-shadow .2s;
+}
+.emp-card:hover { border-color:var(--accent); box-shadow:0 4px 16px rgba(21,101,192,.08); }
+.emp-card.tribunal { border-color:rgba(100,0,0,.3); background:rgba(100,0,0,.02); }
+.tribunal-banner {
+  background:linear-gradient(135deg,rgba(100,0,0,.07),rgba(198,40,0,.05));
+  border:1px solid rgba(150,0,0,.2); border-radius:12px;
+  padding:18px 20px; margin-bottom:20px;
+  display:flex; align-items:flex-start; gap:14px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not request.user.pode_solicitar %}
+<div class="alert alert-warning" style="margin-bottom:16px">
+  <i class="fa-solid fa-ban"></i>
+  <strong>{{ request.user.motivo_bloqueio_requisicao }}</strong>
+</div>
+{% endif %}
+
+{# ── Alerta de caso de tribunal ── #}
+{% for e in emprestimos %}{% if e.status == 'incumprimento' %}
+<div class="tribunal-banner">
+  <i class="fa-solid fa-gavel" style="font-size:26px;color:#7b0000;margin-top:2px;flex-shrink:0"></i>
+  <div>
+    <div style="font-weight:700;font-size:14px;color:#7b0000;margin-bottom:5px">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      Empréstimo em Caso de Tribunal — {{ e.numero_contrato }}
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:12px">
+      O seu empréstimo ultrapassou o prazo máximo de regularização (30 dias + 5 dias de tolerância)
+      e encontra-se em fase de resolução legal. Cobranças adicionais estão suspensas.
+      <br><strong style="color:#7b0000">Não pode solicitar novos empréstimos enquanto esta situação não for resolvida.</strong>
+      Contacte a nossa equipa para regularizar.
+    </div>
+    <a href="{% url 'lancamento_novo' e.pk %}" class="btn btn-sm"
+       style="background:rgba(100,0,0,.1);color:#7b0000;border:1px solid rgba(100,0,0,.25)">
+      <i class="fa-solid fa-money-bill-wave"></i> Regularizar Pagamento
+    </a>
+  </div>
+</div>
+{% endif %}{% endfor %}
+
+{# ── Boas-vindas ── #}
+<div class="card welcome-card">
+  <div class="card-body" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;position:relative;z-index:1">
+    <div class="avatar-circle">{{ request.user.iniciais }}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:#fff">
+        Olá, {{ request.user.first_name|default:request.user.username }}!
+      </div>
+      <div style="font-size:13px;color:rgba(255,255,255,.55);margin-top:3px">
+        <i class="fa-solid fa-shield-check" style="color:var(--gold)"></i>
+        Portal do Cliente · OSM Microcrédito
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px">
+        <i class="fa-solid fa-building-columns" style="color:var(--gold)"></i> {{ banco.banco }}
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;color:rgba(255,255,255,.65)">{{ banco.conta }}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.35)">NIB: {{ banco.nib }}</div>
+    </div>
+  </div>
+</div>
+
+{# ── KPIs ── #}
+<div class="kpi-grid" style="margin-bottom:20px">
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-solid fa-hand-holding-dollar"></i> Empréstimos</div>
+    <div class="kpi-value">{{ emprestimos|length }}</div>
+    <div class="kpi-sub">Total registados</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-solid fa-file-pen"></i> Pedidos</div>
+    <div class="kpi-value">{{ requisicoes|length }}</div>
+    <div class="kpi-sub">Submetidos</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-regular fa-calendar-check"></i> Última actividade</div>
+    <div class="kpi-value" style="font-size:14px">{% now "d/m/Y" %}</div>
+    <div class="kpi-sub">Hoje</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+
+  {# ── Os Meus Empréstimos ── #}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-hand-holding-dollar" style="color:var(--gold)"></i> Os Meus Empréstimos
+      </div>
+    </div>
+    <div class="card-body" style="padding:14px 18px">
+      {% for e in emprestimos %}
+      <div class="emp-card {% if e.status == 'incumprimento' %}tribunal{% endif %}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:10px">
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">{{ e.numero_contrato }}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;
+              color:{% if e.status == 'incumprimento' %}#7b0000{% else %}var(--gold){% endif %}">
+              MT {{ e.valor|floatformat:0 }}
+            </div>
+          </div>
+          <span class="badge badge-{{ e.status }}">
+            {% if e.status == 'incumprimento' %}<i class="fa-solid fa-gavel"></i>
+            {% elif e.status == 'ativo' %}<i class="fa-solid fa-circle-check"></i>
+            {% elif e.status == 'vencido' %}<i class="fa-solid fa-clock"></i>
+            {% elif e.status == 'quitado' %}<i class="fa-solid fa-check-double"></i>
+            {% else %}<i class="fa-solid fa-circle-dot"></i>{% endif %}
+            {{ e.get_status_display }}
+          </span>
+        </div>
+
+        {% if e.status not in 'quitado,rejeitado' %}
+        <div style="margin-bottom:10px">
+          <div class="progress {% if e.status in 'vencido,incumprimento' %}progress-danger{% endif %}">
+            <div class="progress-fill" style="width:{{ e.progresso }}%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px">
+            <span><i class="fa-regular fa-calendar"></i> {{ e.data_inicio|date:"d/m/Y" }}</span>
+            <span>Venc. {{ e.data_vencimento|date:"d/m/Y"|default:"—" }}</span>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if e.status not in 'quitado,rejeitado,pendente' %}
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+          <i class="fa-solid fa-coins" style="color:var(--gold)"></i>
+          Total: <strong>MT {{ e.total_a_pagar|floatformat:2 }}</strong>
+          {% if e.mora_composta %}
+          + multa <strong style="color:var(--danger)">MT {{ e.mora_composta|floatformat:2 }}</strong>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          {% if e.status in 'ativo,vencido,incumprimento' %}
+          <a href="{% url 'lancamento_novo' e.pk %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-money-bill-wave"></i> Pagar
+          </a>
+          <a href="{% url 'lancamentos_lista' e.pk %}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-list-check"></i> Histórico
+          </a>
+          {% endif %}
+          <a href="{% url 'visualizar_contrato' e.pk %}" class="btn btn-secondary btn-sm" target="_blank">
+            <i class="fa-solid fa-file-pdf"></i> Contrato
+          </a>
+        </div>
+      </div>
+      {% empty %}
+      <div style="padding:32px;text-align:center;color:var(--text3)">
+        <i class="fa-solid fa-hand-holding-dollar" style="font-size:36px;margin-bottom:12px;display:block;color:var(--border)"></i>
+        <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:10px">Sem empréstimos registados</div>
+        <a href="{% url 'solicitar_publico' %}" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-file-pen"></i> Solicitar Empréstimo
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Os Meus Pedidos ── #}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-file-circle-plus" style="color:var(--accent)"></i> Os Meus Pedidos
+      </div>
+      {% if not tem_tribunal %}
+      <a href="{% url 'requisicao_nova' %}" {% if not request.user.pode_solicitar %}style="pointer-events:none;opacity:.4" title="{{ request.user.motivo_bloqueio_requisicao }}"{% endif %} class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i> Novo
+      </a>
+      {% endif %}
+    </div>
+    <div class="card-body" style="padding:14px 18px">
+      {% for r in requisicoes %}
+      <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;gap:10px">
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:700;color:var(--text)">
+              MT {{ r.valor_pedido|floatformat:0 }}
+            </div>
+            <div style="font-size:12px;color:var(--text3)">{{ r.finalidade|truncatechars:40 }}</div>
+          </div>
+          <span class="badge {% if r.status == 'aprovado' %}badge-ativo{% elif r.status == 'rejeitado' %}badge-rejeitado{% else %}badge-pendente{% endif %}">
+            {% if r.status == 'aprovado' %}<i class="fa-solid fa-check"></i>
+            {% elif r.status == 'rejeitado' %}<i class="fa-solid fa-xmark"></i>
+            {% else %}<i class="fa-solid fa-clock"></i>{% endif %}
+            {{ r.get_status_display }}
+          </span>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">
+          <i class="fa-regular fa-calendar"></i> {{ r.data_requisicao|date:"d/m/Y H:i" }}
+        </div>
+        {% if r.nota_gestor %}
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;
+             color:var(--text2);margin-top:8px;border-left:3px solid var(--accent)">
+          <i class="fa-solid fa-comment" style="color:var(--accent)"></i> {{ r.nota_gestor }}
+        </div>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div style="padding:32px;text-align:center;color:var(--text3)">
+        <i class="fa-solid fa-inbox" style="font-size:36px;margin-bottom:12px;display:block;color:var(--border)"></i>
+        <div style="font-size:13px;margin-bottom:10px">Nenhum pedido submetido ainda</div>
+        {% if not tem_tribunal %}
+        <a href="{% url 'requisicao_nova' %}" {% if not request.user.pode_solicitar %}style="pointer-events:none;opacity:.4" title="{{ request.user.motivo_bloqueio_requisicao }}"{% endif %} class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-file-pen"></i> Submeter Pedido
+        </a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

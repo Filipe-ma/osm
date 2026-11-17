@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitar Empréstimo — OSM Microcrédito</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0a1628; --ink2:  #1e3a5f;
+  --gold:   #c9a84c; --gold2: #e8c96c;
+  --blue:   #1565c0; --blue2: #1976d2;
+  --bg:     #f0f4f8; --white: #ffffff;
+  --border: #e2e8f0; --text2: #475569; --text3: #94a3b8;
+  --success:#2e7d32; --danger:#c62828; --warn:#e65100;
+  --r: 14px;
+  --ff:      'Plus Jakarta Sans', system-ui, sans-serif;
+  --ff-d:    'Playfair Display', Georgia, serif;
+  --ff-mono: 'Space Mono', monospace;
+  --shadow:  0 4px 24px rgba(10,22,40,.1);
+}
+*,*::before,*::after { box-sizing: border-box; margin:0; padding:0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--ff); background: var(--bg); color: var(--ink); }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: var(--white); border-bottom: 1px solid var(--border);
+  padding: 0 5vw; height: 68px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top:0; z-index:50;
+  box-shadow: 0 2px 16px rgba(10,22,40,.06);
+}
+.logo { display:flex; align-items:center; gap:12px; text-decoration:none; }
+.logo img { width:42px; height:42px; border-radius:10px; object-fit:contain; background:var(--ink); padding:4px; }
+.logo-text { font-family:var(--ff-d); font-weight:700; font-size:18px; color:var(--ink); }
+.logo-text span { color:var(--gold); }
+.topbar-links { display:flex; gap:8px; }
+.btn-back {
+  font-size:13px; font-weight:600; color:var(--ink2);
+  padding:9px 18px; border-radius:9px; border:1.5px solid var(--border);
+  text-decoration:none; display:flex; align-items:center; gap:7px;
+  transition:.2s;
+}
+.btn-back:hover { border-color:var(--blue); color:var(--blue); }
+
+/* ── HERO STRIP ── */
+.hero-strip {
+  background: linear-gradient(135deg, var(--ink) 0%, var(--ink2) 100%);
+  padding: 48px 5vw 36px;
+  position: relative; overflow: hidden;
+}
+.hero-strip::before {
+  content:''; position:absolute; inset:0;
+  background: radial-gradient(ellipse 60% 80% at 90% 50%, rgba(201,168,76,.15) 0%, transparent 70%);
+}
+.hero-strip-inner { max-width:720px; margin:0 auto; position:relative; z-index:1; }
+.hero-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(201,168,76,.15); border:1px solid rgba(201,168,76,.3);
+  border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase; color:var(--gold);
+  margin-bottom:16px;
+}
+.hero-title { font-family:var(--ff-d); font-size:clamp(26px,4vw,40px); color:#fff; line-height:1.2; margin-bottom:12px; }
+.hero-title span { color:var(--gold); }
+.hero-sub { font-size:15px; color:rgba(255,255,255,.65); line-height:1.6; }
+
+/* ── MAIN FORM AREA ── */
+.form-area { max-width:720px; margin:0 auto; padding:32px 5vw 60px; }
+
+/* ── SECTION HEADER ── */
+.sec-header {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:20px; padding-bottom:12px;
+  border-bottom:2px solid var(--gold);
+}
+.sec-icon {
+  width:36px; height:36px; border-radius:9px;
+  background:linear-gradient(135deg,var(--ink),var(--ink2));
+  display:flex; align-items:center; justify-content:center;
+  color:var(--gold); font-size:15px; flex-shrink:0;
+}
+.sec-title { font-family:var(--ff-d); font-size:17px; color:var(--ink); font-weight:700; }
+.sec-sub   { font-size:12px; color:var(--text3); }
+
+/* ── CARD ── */
+.card {
+  background:var(--white); border:1px solid var(--border);
+  border-radius:var(--r); box-shadow:var(--shadow); margin-bottom:22px;
+  overflow:hidden;
+}
+.card-body { padding:24px; }
+
+/* ── FORM ── */
+.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+@media(max-width:580px) {
+  .form-grid-2,.form-grid-3 { grid-template-columns:1fr; }
+}
+.form-group { margin-bottom:16px; }
+.form-label {
+  display:block; font-size:11px; font-weight:700; letter-spacing:.5px;
+  text-transform:uppercase; color:var(--text2); margin-bottom:7px;
+}
+.form-label .req { color:var(--danger); }
+.form-control {
+  width:100%; padding:11px 14px;
+  background:var(--bg); border:1.5px solid var(--border);
+  border-radius:10px; color:var(--ink); font-size:13px; font-family:var(--ff);
+  transition:.2s; outline:none;
+}
+.form-control:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(21,101,192,.1); background:var(--white); }
+textarea.form-control { resize:vertical; }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border:2px dashed var(--border); border-radius:12px;
+  padding:32px; text-align:center; cursor:pointer;
+  transition:.2s; background:var(--bg); position:relative;
+}
+.upload-zone:hover { border-color:var(--gold); background:rgba(201,168,76,.04); }
+.upload-zone.has-file { border-color:var(--success); background:rgba(46,125,50,.04); }
+.upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.upload-icon { font-size:32px; color:var(--gold); margin-bottom:10px; }
+.upload-title { font-size:14px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+.upload-sub   { font-size:12px; color:var(--text3); }
+.upload-name  { font-size:13px; font-weight:600; color:var(--success); margin-top:8px; display:none; }
+
+/* ── VALOR SLIDER ── */
+.valor-display {
+  text-align:center; padding:20px;
+  background:linear-gradient(135deg,var(--ink) 0%,var(--ink2) 100%);
+  border-radius:12px; margin-bottom:16px;
+}
+.valor-label { font-size:11px; color:rgba(255,255,255,.5); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+.valor-num { font-family:var(--ff-mono); font-size:32px; font-weight:700; color:var(--gold); }
+.valor-sub { font-size:12px; color:rgba(255,255,255,.4); margin-top:4px; }
+.range-input {
+  -webkit-appearance:none; width:100%; height:6px;
+  border-radius:3px; outline:none; cursor:pointer;
+  background:linear-gradient(to right, var(--gold) 0%, var(--gold) var(--pct,50%), rgba(255,255,255,.15) var(--pct,50%), rgba(255,255,255,.15) 100%);
+}
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance:none; width:20px; height:20px;
+  border-radius:50%; background:var(--gold); cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+}
+.range-marks { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); margin-top:6px; }
+
+/* ── ALERT ── */
+.alert { padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:16px; display:flex; align-items:flex-start; gap:10px; }
+.alert-error { background:rgba(198,40,40,.08); border:1px solid rgba(198,40,40,.2); color:#b71c1c; }
+.alert-info  { background:rgba(21,101,192,.07); border:1px solid rgba(21,101,192,.15); color:#0d47a1; }
+
+/* ── SUBMIT ── */
+.btn-submit {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:16px 36px; background:linear-gradient(135deg,var(--blue),var(--ink2));
+  color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:700;
+  cursor:pointer; width:100%; justify-content:center;
+  transition:.2s; box-shadow:0 4px 20px rgba(21,101,192,.3);
+  font-family:var(--ff);
+}
+.btn-submit:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(21,101,192,.4); }
+
+/* ── TRUST BADGES ── */
+.trust-row { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; margin-top:28px; }
+.trust-item { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text3); }
+.trust-item i { color:var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="logo">
+    <img src="{% static 'images/logo/logo.png' %}" alt="OSM">
+    <span class="logo-text">OSM <span>Microcrédito</span></span>
+  </a>
+  <div class="topbar-links">
+    <a href="/" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Voltar ao Início</a>
+    <a href="/login/" class="btn-back" style="background:var(--ink);color:#fff;border-color:var(--ink)">
+      <i class="fa-solid fa-right-to-bracket"></i> Entrar
+    </a>
+  </div>
+</div>
+
+<div class="hero-strip">
+  <div class="hero-strip-inner">
+    <div class="hero-eyebrow">
+      <i class="fa-solid fa-file-pen"></i> Solicitação de Empréstimo
+    </div>
+    <h1 class="hero-title">Preencha o Formulário<br>de <span>Solicitação</span></h1>
+    <p class="hero-sub">
+      Preencha os seus dados abaixo. A nossa equipa irá analisar o seu pedido e entrar em
+      contacto em até 48 horas úteis. Após aprovação, receberá as suas credenciais de acesso.
+    </p>
+  </div>
+</div>
+
+<div class="form-area">
+
+  {% for msg in messages %}
+  <div class="alert alert-error">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <span>{{ msg }}</span>
+  </div>
+  {% endfor %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- PASSO 1 OBRIGATÓRIO: Tipo de Cliente — exigido antes de tudo -->
+    <div class="card" style="border:2px solid var(--border);margin-bottom:24px" id="tipo-cliente-section">
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);background:#f8fafc;display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:9px;background:rgba(21,101,192,.1);display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:15px">
+          <i class="fa-solid fa-user-tag"></i>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink)">Tipo de Cliente <span style="color:var(--danger)">*</span></div>
+          <div style="font-size:12px;color:var(--text3)">Escolha antes de prosseguir — determina as condições de pagamento</div>
+        </div>
+      </div>
+      <div style="padding:24px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <label style="border:2.5px solid var(--border);border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;background:#fff;user-select:none;position:relative" id="tc-card-normal" onclick="selectTipoCliente(this,'normal')">
+            <input type="radio" name="tipo_cliente" value="normal" style="position:absolute;opacity:0" required>
+            <div style="font-size:26px;color:var(--blue);margin-bottom:8px"><i class="fa-solid fa-user"></i></div>
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">Cliente Normal</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5">Pagamento mensal único. Mora de 2%/dia sobre saldo em atraso.</div>
+            <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:8px;background:rgba(21,101,192,.1);color:var(--blue)">Mensal</span>
+            <div style="position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center" id="tc-check-normal">
+              <i class="fa-solid fa-check" style="font-size:10px;opacity:0"></i>
+            </div>
+          </label>
+          <label style="border:2.5px solid var(--border);border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;background:#fff;user-select:none;position:relative" id="tc-card-comerciante" onclick="selectTipoCliente(this,'comerciante')">
+            <input type="radio" name="tipo_cliente" value="comerciante" style="position:absolute;opacity:0">
+            <div style="font-size:26px;color:var(--gold);margin-bottom:8px"><i class="fa-solid fa-store"></i></div>
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">Cliente Comerciante</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5">Pagamento diário ou semanal. Multa de 2% por parcela em atraso.</div>
+            <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:8px;background:rgba(201,168,76,.15);color:#7b5a00">Diário / Semanal</span>
+            <div style="position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center" id="tc-check-comerciante">
+              <i class="fa-solid fa-check" style="font-size:10px;opacity:0"></i>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Dados Pessoais -->
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-header">
+          <div class="sec-icon"><i class="fa-solid fa-user"></i></div>
+          <div>
+            <div class="sec-title">Dados Pessoais</div>
+            <div class="sec-sub">Informações de identificação</div>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label"><i class="fa-solid fa-signature"></i> Nome Completo <span class="req">*</span></label>
+            <input type="text" name="nome_completo" class="form-control"
+                   value="{{ valores.nome_completo }}"
+                   placeholder="Ex: João Manuel da Silva" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-phone"></i> Telefone <span class="req">*</span></label>
+            <input type="tel" name="telefone" class="form-control"
+                   value="{{ valores.telefone }}"
+                   placeholder="Ex: 84 000 0000" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-envelope"></i> Email</label>
+            <input type="email" name="email" class="form-control"
+                   value="{{ valores.email }}"
+                   placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-id-card"></i> Nº BI</label>
+            <input type="text" name="bi" class="form-control"
+                   value="{{ valores.bi }}" placeholder="Ex: 123456789A1MZB">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-hashtag"></i> NUIT</label>
+            <input type="text" name="nuit" class="form-control"
+                   value="{{ valores.nuit }}" placeholder="Ex: 400012345">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-map-marker-alt"></i> Bairro / Localidade</label>
+            <input type="text" name="bairro" class="form-control"
+                   value="{{ valores.bairro }}" placeholder="Ex: Polana Cimento">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-heart"></i> Estado Civil</label>
+            <select name="estado_civil" class="form-control">
+              <option value="">— Seleccionar —</option>
+              <option {% if valores.estado_civil == 'Solteiro(a)' %}selected{% endif %}>Solteiro(a)</option>
+              <option {% if valores.estado_civil == 'Casado(a)' %}selected{% endif %}>Casado(a)</option>
+              <option {% if valores.estado_civil == 'Divorciado(a)' %}selected{% endif %}>Divorciado(a)</option>
+              <option {% if valores.estado_civil == 'Viúvo(a)' %}selected{% endif %}>Viúvo(a)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pedido de Empréstimo -->
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-header">
+          <div class="sec-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          <div>
+            <div class="sec-title">Detalhes do Empréstimo</div>
+            <div class="sec-sub">Valor, finalidade e garantia</div>
+          </div>
+        </div>
+
+        <!-- Valor com slider -->
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-coins"></i> Valor Solicitado (MT) <span class="req">*</span></label>
+          <div class="valor-display">
+            <div class="valor-label">Valor do Empréstimo</div>
+            <div class="valor-num" id="valorDisplay">MT 5.000</div>
+            <div class="valor-sub">Prazo: 30 dias · Taxa: 30%/mês</div>
+            <div style="margin-top:16px">
+              <input type="range" class="range-input" id="valorRange"
+                     min="500" max="100000" step="500" value="5000"
+                     oninput="updateValor(this.value)">
+              <div class="range-marks">
+                <span>MT 500</span><span>MT 25K</span><span>MT 50K</span><span>MT 100K</span>
+              </div>
+            </div>
+          </div>
+          <input type="number" name="valor_pedido" id="valorInput"
+                 class="form-control" value="{{ valores.valor_pedido|default:'5000' }}"
+                 min="500" step="0.01" required
+                 placeholder="Ou escreva directamente o valor"
+                 oninput="updateFromInput(this.value)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-bullseye"></i> Finalidade do Empréstimo <span class="req">*</span></label>
+          <input type="text" name="finalidade" class="form-control"
+                 value="{{ valores.finalidade }}"
+                 placeholder="Ex: Capital de giro para mercearia, compra de equipamento..." required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-shield-halved"></i> Garantia Oferecida</label>
+          <textarea name="garantia_desc" class="form-control" rows="3"
+                    placeholder="Ex: Viatura, imóvel, maquinaria, aval pessoal...">{{ valores.garantia_desc }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documentos -->
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-header">
+          <div class="sec-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <div>
+            <div class="sec-title">Documentação</div>
+            <div class="sec-sub">Anexe o PDF com os seus documentos</div>
+          </div>
+        </div>
+
+        <div class="alert alert-info">
+          <i class="fa-solid fa-circle-info"></i>
+          <div>
+            <strong>O PDF deve conter:</strong> cópia do BI, NUIT, declaração de residência e comprovante de rendimento.
+            Pode juntar num único ficheiro PDF antes de fazer upload.
+          </div>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" name="documento_pdf" accept=".pdf"
+                 onchange="fileSelected(this)" id="fileInput">
+          <div class="upload-icon"><i class="fa-solid fa-file-pdf"></i></div>
+          <div class="upload-title">Clique ou arraste o PDF aqui</div>
+          <div class="upload-sub">BI · NUIT · Declaração de Residência · Comprovante de Rendimento</div>
+          <div class="upload-name" id="uploadName">
+            <i class="fa-solid fa-check-circle"></i> <span id="fileName"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Termos e Submissão -->
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:20px">
+          <input type="checkbox" id="termos" required
+                 style="margin-top:3px;width:17px;height:17px;cursor:pointer;accent-color:var(--blue)">
+          <label for="termos" style="font-size:13px;color:var(--text2);cursor:pointer;line-height:1.6">
+            Declaro que as informações prestadas são verdadeiras e autorizo a OSM Microcrédito
+            a verificar os dados fornecidos para análise do pedido de crédito.
+          </label>
+        </div>
+        <button type="submit" class="btn-submit">
+          <i class="fa-solid fa-paper-plane"></i>
+          Enviar Solicitação de Empréstimo
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <div class="trust-row">
+          <div class="trust-item"><i class="fa-solid fa-lock"></i> Dados protegidos e confidenciais</div>
+          <div class="trust-item"><i class="fa-solid fa-clock"></i> Resposta em até 48h úteis</div>
+          <div class="trust-item"><i class="fa-solid fa-shield-check"></i> Análise sem compromisso</div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+function updateValor(val) {
+  val = parseInt(val);
+  document.getElementById('valorDisplay').textContent = 'MT ' + val.toLocaleString('pt-MZ');
+  document.getElementById('valorInput').value = val;
+  const pct = ((val - 500) / (100000 - 500)) * 100;
+  document.getElementById('valorRange').style.setProperty('--pct', pct + '%');
+}
+function updateFromInput(val) {
+  val = parseInt(val) || 500;
+  val = Math.max(500, Math.min(100000, val));
+  document.getElementById('valorDisplay').textContent = 'MT ' + val.toLocaleString('pt-MZ');
+  document.getElementById('valorRange').value = val;
+  const pct = ((val - 500) / (100000 - 500)) * 100;
+  document.getElementById('valorRange').style.setProperty('--pct', pct + '%');
+}
+function fileSelected(input) {
+  if (input.files && input.files[0]) {
+    const f = input.files[0];
+    document.getElementById('uploadZone').classList.add('has-file');
+    document.getElementById('uploadName').style.display = 'block';
+    document.getElementById('fileName').textContent = f.name + ' (' + (f.size/1024).toFixed(1) + 'KB)';
+  }
+}
+// Init slider
+updateValor(document.getElementById('valorRange').value);
+
+// Drag & Drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--gold)'; });
+zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('fileInput').files = e.dataTransfer.files;
+    fileSelected(document.getElementById('fileInput'));
+  }
+});
+</script>
+<script>
+function selectTipoCliente(label, tipo) {
+  ['normal','comerciante'].forEach(t => {
+    const card = document.getElementById('tc-card-' + t);
+    const check = document.getElementById('tc-check-' + t);
+    const icon = check.querySelector('i');
+    if (t === tipo) {
+      card.style.borderColor = 'var(--blue)';
+      card.style.background = 'rgba(21,101,192,.04)';
+      card.style.boxShadow = '0 0 0 3px rgba(21,101,192,.12)';
+      check.style.background = 'var(--blue)';
+      check.style.borderColor = 'var(--blue)';
+      check.style.color = '#fff';
+      icon.style.opacity = '1';
+      card.querySelector('input').checked = true;
+    } else {
+      card.style.borderColor = 'var(--border)';
+      card.style.background = '#fff';
+      card.style.boxShadow = 'none';
+      check.style.background = '#fff';
+      check.style.borderColor = 'var(--border)';
+      check.style.color = 'inherit';
+      icon.style.opacity = '0';
+    }
+  });
+}
+// Select normal by default
+document.addEventListener('DOMContentLoaded', () => {
+  selectTipoCliente(document.getElementById('tc-card-normal'), 'normal');
+});
+</script>
+</body>
+</html>

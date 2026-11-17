@@ -1,0 +1,119 @@
+{% extends "osm/base2.html" %}
+{% block title %}Novo Pedido — OSM{% endblock %}
+{% block topbar_title %}Submeter Pedido de Crédito{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'portal_cliente' %}" class="btn btn-secondary btn-sm">← Minha Conta</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 980px; margin: 0 auto;">
+<form method="post">
+{% csrf_token %}
+<div class="card shadow" style="border: none;">
+
+  <!-- Cabeçalho preto forte com laranja -->
+  <div class="card-header text-white" style="background: #030b20; border-bottom: 5px solid #ffff;">
+    <div class="card-title mb-0 fs-4 text-whites" style="color: #ffff;">
+      <i class="fa-solid fa-pen"></i> Dados do Pedido
+    </div>
+  </div>
+  
+  <div class="card-body">
+
+    <!-- Campos lado a lado: Valor + Parcelas -->
+    <div class="row g-4">
+      <!-- Valor Pretendido -->
+      <div class="col-md-7">
+        <div class="form-group">
+          <label class="form-label fw-bold" style="color:#1c1c1c;">Valor Pretendido (MT) *</label>
+          <input name="valor" 
+                 class="form-control form-control-lg" 
+                 type="number" 
+                 step="100" 
+                 min="1000" 
+                 placeholder="Ex: 25000" 
+                 required 
+                 oninput="simPedido(this.value)"
+                 style="border: 3px solid #030b20; font-size: 1.15rem; font-weight: 500;">
+          <div id="sim-out" style="font-size:14px; color:#030b20; margin-top:8px; font-weight:600;"></div>
+        </div>
+      </div>
+
+      <!-- Nº de Parcelas (1 mês) -->
+      <div class="col-md-5">
+        <div class="form-group">
+          <label class="form-label fw-bold" style="color:#1c1c1c;">Nº de Parcelas</label>
+          <input type="text" 
+                 name="num_parcelas" 
+                 value="1 mês" 
+                 class="form-control form-control-lg text-center fw-bold"
+                 style="background: #030b20; color: white; border: 3px solid #030b20; font-size: 1.15rem; cursor: default;"
+                 readonly>
+          <!-- <small class="text-danger mt-1 d-block fw-bold">Pagamento único em 1 parcela</small> -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Finalidade e Garantia (abaixo) -->
+    <div class="row g-4 mt-3">
+      <div class="col-12">
+        <div class="form-group">
+          <label class="form-label fw-bold" style="color:#1c1c1c;">Finalidade do Crédito *</label>
+          <input name="finalidade" 
+                 class="form-control form-control-lg" 
+                 placeholder="Ex: Capital de giro para compra de stock" 
+                 required
+                 style="border: 3px solid #030b20;">
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="form-group">
+          <label class="form-label fw-bold" style="color:#1c1c1c;">Garantia Disponível</label>
+          <textarea name="garantia" 
+                    class="form-control form-control-lg" 
+                    style="height:90px; resize:none; border: 3px solid #030b20;"
+                    placeholder="Descreva o bem que pode oferecer como garantia (opcional)"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Box de Informação -->
+    <div style="background:#fff3e0; border: 3px solid #030b20; border-radius:12px; padding:16px 20px; margin:25px 0; font-size:14px; color:#d43f00; line-height:1.5;">
+      <i class="fa-solid fa-circle-info fa-lg me-2"></i> 
+      O seu pedido será analisado pela equipa OSM. Receberá resposta em até 24 horas úteis.
+    </div>
+
+    <!-- Botão -->
+    <button type="submit" 
+            class="btn btn-lg btn-full fw-bold" 
+            style="background:#030b20; color:white; border:none; font-size:1.2rem; padding:16px;">
+      Submeter Pedido <i class="fa-solid fa-arrow-right"></i>
+    </button>
+
+  </div>
+</div>
+</form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+function simPedido(v){
+  const cap = parseFloat(v) || 0;
+  const el = document.getElementById('sim-out');
+  
+  if(cap < 1000){
+    el.textContent = '';
+    return;
+  }
+
+  const taxa = 0.30;
+  const total = cap * (1 + taxa);
+  const parcela = total;
+
+  el.innerHTML = `
+    Parcela estimada: <strong>${Math.round(parcela).toLocaleString('pt-PT')} MT</strong> (única) &nbsp;·&nbsp; 
+    Total: <strong>${Math.round(total).toLocaleString('pt-PT')} MT</strong> <span style="color:#006400">(taxa 30%)</span>
+  `;
+}
+{% endblock %}

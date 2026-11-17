@@ -1,0 +1,887 @@
+{% extends "osm/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ emp.numero_contrato }} — {{ emp.nome }}{% endblock %}
+{% block nav_emprestimos %}active{% endblock %}
+{% block topbar_title %}{{ emp.nome }}{% endblock %}
+{% block topbar_sub %}{{ emp.numero_contrato }} · {{ emp.get_status_display }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'lancamento_novo' emp.pk %}" class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-money-bill-wave"></i> Lançar Pagamento
+</a>
+{% if not emp.esta_quitado and emp.status not in 'pendente,rejeitado,quitado' %}
+<a href="{% url 'lancamento_parcial' emp.pk %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-chart-line"></i> Pagamento Parcial
+</a>
+{% endif %}
+<a href="{% url 'lancamentos_lista' emp.pk %}" class="btn btn-secondary btn-sm">
+  <i class="fa-solid fa-list-check"></i> Lançamentos{% if lancamentos_pendentes %} <span style="background:var(--danger);color:white;border-radius:10px;padding:0 6px;font-size:10px">{{ lancamentos_pendentes }}</span>{% endif %}
+</a>
+<a href="{% url 'visualizar_contrato' emp.pk %}" class="btn btn-secondary btn-sm" target="_blank">
+  <i class="fa-solid fa-eye"></i> Ver Contrato
+</a>
+<a href="{% url 'emprestimo_editar' emp.pk %}" class="btn btn-secondary btn-sm">
+  <i class="fa-solid fa-pen"></i> Editar
+</a>
+<a href="{% url 'creditos_cliente' emp.pk %}" class="btn btn-dark btn-sm">← Voltar</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── MODALS (mantido apenas para outras modals que não a de crédito) ── */
+.osm-modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.55); z-index: 1050;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(3px); padding: 20px;
+}
+.osm-modal-backdrop.open { display: flex; }
+.osm-modal {
+  background: var(--surface); border-radius: 18px;
+  max-width: 460px; width: 100%;
+  box-shadow: 0 24px 60px rgba(0,0,0,.35);
+  animation: modalIn .25s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+@keyframes modalIn {
+  from { opacity:0; transform:translateY(24px) scale(.96); }
+  to   { opacity:1; transform:none; }
+}
+.osm-modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.osm-modal-header .modal-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.osm-modal-header .modal-title { font-size: 16px; font-weight: 700; }
+.osm-modal-header .modal-sub   { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.osm-modal-body   { padding: 20px 24px; }
+.osm-modal-footer {
+  padding: 14px 24px 20px;
+  display: flex; justify-content: flex-end; gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── HISTÓRICO ──────────────────────────────────────────── */
+.hist-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.hist-item:last-child { border: none; }
+.hist-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.hist-info { flex: 1; min-width: 0; }
+.hist-valor { font-family: var(--ff-mono); font-weight: 800; font-size: 15px; }
+.hist-meta  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.hist-tipo  { font-size: 11px; font-weight: 700; }
+
+/* ── CRÉDITOS ───────────────────────────────────────────── */
+.credito-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--surface2);
+  transition: all 0.2s ease;
+}
+.credito-item:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+.credito-header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.credito-valor {
+  font-weight: 800;
+  font-family: var(--ff-mono);
+  font-size: 16px;
+}
+.credito-status {
+  font-size: 11px;
+  font-weight: 700;
+}
+.credito-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 6px;
+}
+.progress-small {
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+/* ── TABS DE CRÉDITO ─────────────────────────────────────── */
+.cred-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 14px 16px 0;
+}
+.cred-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
+  border-radius: 10px 10px 0 0;
+  border: 2px solid var(--border);
+  border-bottom: none;
+  background: var(--surface2);
+  cursor: pointer;
+  font-size: 12px; font-weight: 600;
+  color: var(--text3);
+  transition: all .15s ease;
+  position: relative; bottom: -1px;
+}
+.cred-tab:hover { color: var(--text); background: var(--surface); }
+.cred-tab.active {
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-bottom-color: var(--surface);
+}
+.cred-tab .cred-tab-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; flex-shrink: 0;
+}
+.cred-tab.active .cred-tab-num { background: var(--accent); color: white; }
+.cred-tab .cred-tab-status { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── PAINEL DO CRÉDITO ──────────────────────────────────── */
+.cred-painel { display: none; }
+.cred-painel.active { display: block; }
+
+/* ── LIGHTBOX ────────────────────────────────────────────── */
+#lb { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999;
+      align-items:center; justify-content:center; flex-direction:column; }
+#lb.open { display:flex; }
+#lb img { max-width:88vw; max-height:84vh; border-radius:10px; object-fit:contain; }
+#lb-close { position:fixed; top:20px; right:24px; color:white; font-size:30px; cursor:pointer;
+             background:rgba(255,255,255,.15); border:none; border-radius:50%;
+             width:42px; height:42px; display:flex; align-items:center; justify-content:center; }
+#lb-caption { color:rgba(255,255,255,.65); font-size:12px; margin-top:10px; }
+#lb-nav { position:fixed; bottom:24px; display:flex; gap:10px; }
+#lb-nav button { background:rgba(255,255,255,.15); border:none; color:white;
+                  padding:8px 18px; border-radius:20px; font-size:13px; cursor:pointer; }
+.img-thumb { width:96px; height:96px; object-fit:cover; border-radius:9px;
+             border:2px solid var(--border); cursor:pointer; transition:all .2s; }
+.img-thumb:hover { border-color:var(--accent); transform:scale(1.06); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+
+  <div>
+    <!-- Painel principal de estado -->
+    <!-- ===== CARTÕES DE ESTADO POR CRÉDITO (um por crédito, troca com JS) ===== -->
+    {% for cred in creditos_activos %}
+    <div class="card cred-status-card" id="status-card-{{ forloop.counter0 }}"
+         style="{% if forloop.counter0 != credito_sel_idx %}display:none{% endif %}"
+         data-idx="{{ forloop.counter0 }}">
+      <div class="card-body">
+        <!-- Cabeçalho: estado + progresso -->
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Estado do Crédito</div>
+            {% if cred.em_incumprimento %}
+              <span class="badge badge-incumprimento" style="font-size:13px;padding:5px 14px"><i class="fa-solid fa-gavel"></i> Tribunal</span>
+            {% elif cred.esta_vencido %}
+              <span class="badge badge-vencido" style="font-size:13px;padding:5px 14px"><i class="fa-solid fa-triangle-exclamation"></i> Vencido</span>
+            {% elif cred.esta_quitado %}
+              <span class="badge badge-quitado" style="font-size:13px;padding:5px 14px"><i class="fa-solid fa-check-circle"></i> Quitado</span>
+            {% else %}
+              <span class="badge badge-activo" style="font-size:13px;padding:5px 14px"><i class="fa-solid fa-hourglass-half"></i> Em andamento</span>
+            {% endif %}
+          </div>
+          <div style="flex:1;min-width:140px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Progresso</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:8px;background:var(--border);border-radius:20px;overflow:hidden">
+                <div style="height:100%;width:{{ cred.percentual_pago }}%;background:{% if cred.em_incumprimento %}var(--danger){% elif cred.esta_vencido %}var(--warn){% else %}var(--success){% endif %};border-radius:20px;transition:width .4s"></div>
+              </div>
+              <span style="font-size:12px;font-weight:700;font-family:var(--ff-mono)">{{ cred.percentual_pago }}%</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">
+              {{ cred.data_inicio|date:"d/m/Y" }} → {{ cred.vencimento|date:"d/m/Y" }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloco financeiro consoante estado do crédito -->
+        {% if cred.esta_quitado %}
+        <div style="background:rgba(46,125,50,.08);border:1px solid rgba(46,125,50,.2);border-radius:12px;padding:22px;text-align:center">
+          <div style="font-size:38px;margin-bottom:8px;color:var(--success)"><i class="fa-solid fa-check-circle"></i></div>
+          <div style="font-size:16px;font-weight:700;color:var(--success)">Crédito Quitado</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:8px">
+            Capital: MT {{ cred.valor|floatformat:2 }} · Juros: MT {{ cred.juros_valor|floatformat:2 }}
+          </div>
+        </div>
+
+        {% elif cred.em_incumprimento %}
+        <div style="background:var(--danger-l);border:1px solid rgba(198,40,40,.3);border-radius:12px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <i class="fa-solid fa-gavel" style="font-size:20px;color:var(--danger)"></i>
+            <div style="font-weight:700;color:var(--danger)">Tribunal — {{ cred.dias_desde_vencimento }} dias em atraso</div>
+          </div>
+          <div style="font-size:12px;color:var(--danger)">Valor congelado. Sem juros adicionais.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:var(--text3)">Capital + Juros</div>
+            <div style="font-family:var(--ff-mono);font-size:15px;font-weight:700">MT {{ cred.total_a_pagar|floatformat:2 }}</div>
+          </div>
+          <div style="text-align:center;background:var(--danger-l);border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:var(--danger)">Multa Congelada</div>
+            <div style="font-family:var(--ff-mono);font-size:15px;font-weight:700;color:var(--danger)">MT {{ cred.mora_composta|floatformat:2 }}</div>
+          </div>
+          <div style="text-align:center;background:rgba(198,40,40,.1);border:1px solid rgba(198,40,40,.25);border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:var(--danger);font-weight:700">TOTAL FIXO</div>
+            <div style="font-family:var(--ff-mono);font-size:17px;font-weight:700;color:var(--danger)">MT {{ cred.total_com_multa|floatformat:2 }}</div>
+          </div>
+        </div>
+        <a href="{% url 'lancamento_novo' emp.pk %}?credito={{ cred.pk }}" class="btn btn-danger btn-full btn-lg">
+          <i class="fa-solid fa-money-bill-wave"></i> Registar Recebimento
+        </a>
+
+        {% elif cred.esta_vencido %}
+        <div style="background:rgba(230,81,0,.08);border:1px solid rgba(230,81,0,.25);border-radius:12px;padding:14px;margin-bottom:14px">
+          <div style="font-weight:700;color:var(--warn)"><i class="fa-solid fa-triangle-exclamation"></i> Vencido há {{ cred.dias_desde_vencimento }} dia(s)</div>
+          <div style="font-size:12px;color:var(--warn);margin-top:4px">Multa: {{ cred.taxa_multa }}%/dia · {{ cred.dias_multa_restantes }} dia(s) restante(s)</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:var(--text3)">Capital + Juros</div>
+            <div style="font-family:var(--ff-mono);font-size:15px;font-weight:700">MT {{ cred.total_a_pagar|floatformat:2 }}</div>
+          </div>
+          <div style="text-align:center;background:var(--warn-l);border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:var(--warn)">Multa Acumulada</div>
+            <div style="font-family:var(--ff-mono);font-size:15px;font-weight:700;color:var(--warn)">MT {{ cred.mora_composta|floatformat:2 }}</div>
+          </div>
+          <div style="text-align:center;background:rgba(230,81,0,.1);border:1px solid rgba(230,81,0,.2);border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:var(--warn);font-weight:700">TOTAL HOJE</div>
+            <div style="font-family:var(--ff-mono);font-size:17px;font-weight:700;color:var(--warn)">MT {{ cred.total_com_multa|floatformat:2 }}</div>
+          </div>
+        </div>
+        <a href="{% url 'lancamento_novo' emp.pk %}?credito={{ cred.pk }}" class="btn btn-full btn-lg" style="background:var(--warn);color:white;">
+          <i class="fa-solid fa-money-bill-wave"></i> Lançar Pagamento
+        </a>
+
+        {% else %}
+        <!-- Activo no prazo -->
+        <div style="display:grid;grid-template-columns:1fr 1fr{% if cred.is_parcial %} 1fr{% endif %};gap:10px;margin-bottom:14px">
+          <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:10px;color:var(--text3)">Capital</div>
+            <div style="font-family:var(--ff-mono);font-size:15px;font-weight:700">MT {{ cred.valor|floatformat:2 }}</div>
+          </div>
+          <div style="text-align:center;background:var(--accent-l);border-radius:10px;padding:14px">
+            <div style="font-size:10px;color:var(--accent);font-weight:700">TOTAL A PAGAR</div>
+            <div style="font-family:var(--ff-mono);font-size:20px;font-weight:700;color:var(--accent)">MT {{ cred.total_a_pagar|floatformat:2 }}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">Juros: MT {{ cred.juros_valor|floatformat:2 }} ({{ cred.taxa_juros }}%)</div>
+          </div>
+          {% if cred.is_parcial %}
+          <div style="text-align:center;background:rgba(230,81,0,.08);border:1px solid rgba(230,81,0,.2);border-radius:10px;padding:14px">
+            <div style="font-size:10px;color:var(--warn);font-weight:700">SALDO RESTANTE</div>
+            <div style="font-family:var(--ff-mono);font-size:20px;font-weight:700;color:var(--warn)">MT {{ cred.saldo_restante|floatformat:2 }}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">Pago: MT {{ cred.total_pago_parcial|floatformat:2 }}</div>
+          </div>
+          {% endif %}
+        </div>
+        <a href="{% url 'lancamento_novo' emp.pk %}?credito={{ cred.pk }}" class="btn btn-success btn-full btn-lg">
+          <i class="fa-solid fa-money-bill-wave"></i> Lançar Pagamento — MT {{ cred.total_a_pagar|floatformat:2 }}
+        </a>
+        {% endif %}
+
+        <div style="margin-top:10px">
+          <a href="{% url 'lancamentos_lista' emp.pk %}" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-list-check"></i> Histórico de Lançamentos
+          </a>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <!-- Sem créditos activos: mostra estado global do empréstimo -->
+    <div class="card">
+      <div class="card-body">
+        {% if emp.esta_quitado %}
+        <div style="background:rgba(46,125,50,.08);border:1px solid rgba(46,125,50,.2);border-radius:12px;padding:24px;text-align:center">
+          <div style="font-size:42px;margin-bottom:10px;color:var(--success)"><i class="fa-solid fa-check-circle"></i></div>
+          <div style="font-size:18px;font-weight:700;color:var(--success)">Empréstimo Quitado com Sucesso</div>
+        </div>
+        {% elif emp.status == 'pendente' %}
+        <div class="alert alert-warning"><i class="fa-solid fa-hourglass-half"></i> Aguarda aprovação.</div>
+        {% elif emp.status == 'rejeitado' %}
+        <div class="alert alert-error"><i class="fa-solid fa-times-circle"></i> Rejeitado — {{ emp.motivo_rejeicao|default:"Sem motivo" }}</div>
+        {% endif %}
+        <div style="margin-top:10px">
+          <a href="{% url 'lancamentos_lista' emp.pk %}" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-list-check"></i> Histórico de Lançamentos
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Créditos quitados também mostram card -->
+    {% for cred in creditos_quitados %}
+    <div class="card cred-status-card" id="status-card-quit-{{ forloop.counter0 }}" style="display:none">
+      <div class="card-body">
+        <div style="background:rgba(46,125,50,.08);border:1px solid rgba(46,125,50,.2);border-radius:12px;padding:20px;text-align:center">
+          <div style="font-size:34px;margin-bottom:8px;color:var(--success)"><i class="fa-solid fa-check-circle"></i></div>
+          <div style="font-size:15px;font-weight:700;color:var(--success)">Crédito Quitado</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:8px">
+            Capital: MT {{ cred.valor|floatformat:2 }}<br>
+            {% if cred.data_pagamento %}Pago em: {{ cred.data_pagamento|date:"d/m/Y" }}{% endif %}
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <a href="{% url 'lancamentos_lista' emp.pk %}" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-list-check"></i> Histórico de Lançamentos
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Acções de Gestão (comuns ao empréstimo, sempre visíveis) -->
+    {% if request.user.pode_aprovar and emp.status not in 'pendente,rejeitado' %}
+    <div class="card">
+      <div class="card-header"><div class="card-title"><i class="fa-solid fa-shield-halved"></i> Acções de Gestão</div></div>
+      <div class="card-body">
+        {% if emp.multa_cancelada %}
+        <div style="background:rgba(46,125,50,.07);border:1px solid rgba(46,125,50,.2);border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px;color:var(--success)">
+          <i class="fa-solid fa-ban"></i> <strong>Multa cancelada</strong>{% if emp.motivo_cancelamento_multa %} — {{ emp.motivo_cancelamento_multa }}{% endif %}
+        </div>
+        <form method="post" action="{% url 'cancelar_multa' emp.pk %}" style="margin-bottom:8px">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary btn-full btn-sm"><i class="fa-solid fa-rotate-left"></i> Reactivar Multa</button>
+        </form>
+        {% else %}
+        <button type="button" class="btn btn-outline btn-full btn-sm" style="margin-bottom:8px" onclick="abrirModal('modalCancelarMulta')">
+          <i class="fa-solid fa-ban"></i> Cancelar Multa
+        </button>
+        {% endif %}
+        {% if emp.enviado_tribunal %}
+        <form method="post" action="{% url 'retirar_tribunal' emp.pk %}" style="margin-bottom:8px">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline btn-full btn-sm" style="color:var(--warn);border-color:var(--warn)"><i class="fa-solid fa-arrow-rotate-left"></i> Retirar do Tribunal</button>
+        </form>
+        {% else %}
+        <button type="button" class="btn btn-full btn-sm" style="background:var(--danger);color:white;margin-bottom:8px" onclick="abrirModal('modalTribunal')">
+          <i class="fa-solid fa-gavel"></i> Enviar para Tribunal
+        </button>
+        {% endif %}
+        <form method="post" action="{% url 'converter_tipo_emprestimo' emp.pk %}" style="margin-bottom:8px">
+          {% csrf_token %}
+          <div style="display:flex;gap:8px;align-items:center">
+            <select name="tipo_cliente" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2)">
+              <option value="normal" {% if emp.tipo_cliente == 'normal' %}selected{% endif %}>Cliente Normal (mensal)</option>
+              <option value="comerciante" {% if emp.tipo_cliente == 'comerciante' %}selected{% endif %}>Comerciante (diário/semanal)</option>
+            </select>
+            <button type="submit" class="btn btn-secondary btn-sm">Alterar</button>
+          </div>
+        </form>
+        {% if not emp.cliente %}
+        <div style="margin-top:10px;background:rgba(25,118,210,.07);border:1px solid rgba(25,118,210,.2);border-radius:10px;padding:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:8px"><i class="fa-solid fa-user-slash"></i> Sem conta associada</div>
+          <form method="post" action="{% url 'associar_conta' emp.pk %}">
+            {% csrf_token %}
+            <div style="display:flex;gap:8px">
+              <select name="utilizador_id" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface)">
+                <option value="">— Seleccionar —</option>
+                {% for u in clientes_sem_emprestimo %}<option value="{{ u.pk }}">{{ u.nome_completo }} ({{ u.username }})</option>{% endfor %}
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">Associar</button>
+            </div>
+          </form>
+        </div>
+        {% endif %}
+        <div style="margin-top:14px;text-align:center;border-top:1px solid var(--border);padding-top:14px">
+          <button type="button" class="btn btn-danger btn-sm" onclick="abrirModal('modalEliminar')">
+            <i class="fa-solid fa-trash-alt"></i> Eliminar Empréstimo
+          </button>
+          <small style="color:var(--text3);display:block;margin-top:6px">Apenas Super Admin</small>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ==================== HISTÓRICO DE PAGAMENTOS (Lançamentos) ==================== -->
+    {% if lancamentos_validados %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent)"></i> Histórico de Pagamentos</div>
+        <a href="{% url 'lancamentos_lista' emp.pk %}" class="btn btn-secondary btn-sm">Ver todos</a>
+      </div>
+      <div class="card-body" style="padding-top:8px">
+        {% if emp.total_pago_parcial > 0 %}
+        <div style="margin-bottom:16px;padding:14px;background:var(--surface2);border-radius:12px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:8px">
+            <span><i class="fa-solid fa-money-bill-wave" style="color:var(--success)"></i> Total pago até hoje</span>
+            <strong style="color:var(--success)">MT {{ emp.total_pago_parcial|floatformat:2 }}</strong>
+          </div>
+          {% if emp.total_a_pagar > 0 %}
+          {% widthratio emp.total_pago_parcial emp.total_a_pagar 100 as pct_pago %}
+          <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:{{ pct_pago }}%;background:var(--success);border-radius:4px;transition:width .5s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:5px">
+            <span>{{ pct_pago }}% pago</span>
+            <span>Restante: MT {{ emp.saldo_restante|default:emp.total_com_multa|floatformat:2 }}</span>
+          </div>
+          {% else %}
+          <div style="font-size:12px;color:var(--text3);margin-top:5px">Valor total não definido.</div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% for lanc in lancamentos_validados %}
+        {% with m=lanc.metodo %}
+        <div class="hist-item">
+          <div class="hist-icon"
+               style="background:{% if m == 'dinheiro' %}rgba(46,125,50,.12){% elif m == 'mpesa' %}rgba(198,40,40,.12){% elif m == 'mkesh' %}rgba(230,81,0,.12){% elif m == 'emola' %}rgba(0,105,92,.12){% elif m == 'transferencia' %}rgba(21,101,192,.12){% else %}rgba(69,39,160,.12){% endif %}">
+            <i class="fa-solid {% if m == 'dinheiro' %}fa-money-bills{% elif m == 'mpesa' %}fa-mobile-screen-button{% elif m == 'mkesh' %}fa-mobile-alt{% elif m == 'emola' %}fa-wallet{% elif m == 'transferencia' %}fa-building-columns{% else %}fa-circle-question{% endif %}"
+               style="color:{% if m == 'dinheiro' %}#2e7d32{% elif m == 'mpesa' %}#c62828{% elif m == 'mkesh' %}#e65100{% elif m == 'emola' %}#00695c{% elif m == 'transferencia' %}#1565c0{% else %}#4527a0{% endif %}"></i>
+          </div>
+          <div class="hist-info">
+            <div class="hist-valor" style="color:var(--success)">+ MT {{ lanc.valor_pago|floatformat:2 }}</div>
+            <div class="hist-meta">
+              {{ lanc.get_metodo_display }} · {{ lanc.data_pagamento|date:"d/m/Y" }}
+              {% if lanc.referencia %} · Ref: {{ lanc.referencia }}{% endif %}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="hist-tipo" style="color:{% if lanc.tipo_pagamento == 'total' %}var(--success){% else %}var(--warn){% endif %}">
+              {{ lanc.get_tipo_pagamento_display }}
+            </div>
+            <div style="display:flex;gap:6px;margin-top:4px;justify-content:flex-end;flex-wrap:wrap">
+              <a href="{% url 'lancamento_recibo' lanc.pk %}" target="_blank"
+                 class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px"><i class="fa-solid fa-receipt"></i> Recibo</a>
+              <a href="{% url 'lancamento_fatura' lanc.pk %}" target="_blank"
+                 class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px"><i class="fa-solid fa-file-invoice"></i> Fatura</a>
+              <a href="{% url 'lancamento_fatura_dupla' lanc.pk %}" target="_blank"
+                 class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;border-color:var(--accent);color:var(--accent)"><i class="fa-solid fa-copy"></i> Dupla</a>
+              <a href="{% url 'lancamento_recibo_pos' lanc.pk %}" target="_blank"
+                 class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;border-color:#880e4f;color:#880e4f"><i class="fa-solid fa-print"></i> POS</a>
+              <a href="{% url 'lancamento_fatura_turbohost' lanc.pk %}" target="_blank"
+                 class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;border-color:#e65100;color:#e65100"><i class="fa-solid fa-file-invoice-dollar"></i> Invoice</a>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Dados Pessoais -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-user"></i> Dados Pessoais</div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div>
+            <div class="detail-row"><span class="detail-key">Nome</span><span class="detail-val">{{ emp.nome }}</span></div>
+            <div class="detail-row"><span class="detail-key">NUIT</span><span class="detail-val td-mono">{{ emp.nuit|default:"—" }}</span></div>
+            <div class="detail-row"><span class="detail-key">BI</span><span class="detail-val td-mono">{{ emp.bi|default:"—" }}</span></div>
+            <div class="detail-row"><span class="detail-key">Telefone</span><span class="detail-val">{{ emp.telefone|default:"—" }}</span></div>
+            <div class="detail-row"><span class="detail-key">Estado Civil</span><span class="detail-val">{{ emp.estado_civil|default:"—" }}</span></div>
+          </div>
+          <div style="border-left:1px solid var(--border);padding-left:20px">
+            <div class="detail-row"><span class="detail-key">Bairro</span><span class="detail-val">{{ emp.bairro|default:"—" }}</span></div>
+            <div class="detail-row"><span class="detail-key">Distrito</span><span class="detail-val">{{ emp.distrito|default:"—" }}</span></div>
+            <div class="detail-row"><span class="detail-key">Nome do Pai</span><span class="detail-val">{{ emp.nome_pai|default:"—" }}</span></div>
+            <div class="detail-row"><span class="detail-key">Nome da Mãe</span><span class="detail-val">{{ emp.nome_mae|default:"—" }}</span></div>
+            <div class="detail-row"><span class="detail-key">Empregador</span><span class="detail-val">{{ emp.empregador|default:"—" }}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fotos da Garantia — com lightbox -->
+    {% if emp.fotos_garantia.all %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-camera"></i> Fotos da Garantia</div>
+        <span style="font-size:12px;color:var(--text3)">Clique para ampliar</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          {% for f in emp.fotos_garantia.all %}
+          <img src="{{ f.foto.url }}" alt="Garantia {{ forloop.counter }}"
+               class="img-thumb" title="Clique para ampliar">
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- ═══════════ COLUNA LATERAL ═══════════ -->
+  <div>
+
+    <!-- SELECTOR DE CRÉDITO + PAINEL FINANCEIRO -->
+    <div class="card" style="position:sticky;top:80px">
+
+      {% if creditos_activos|length > 1 %}
+      <!-- Tabs — 2+ créditos activos -->
+      <div class="cred-tabs">
+        {% for cred in creditos_activos %}
+        <button class="cred-tab {% if forloop.counter0 == credito_sel_idx %}active{% endif %}"
+                onclick="selectCred({{ forloop.counter0 }}, this)"
+                title="MT {{ cred.valor|floatformat:0 }} · {% if cred.em_incumprimento %}Tribunal{% elif cred.esta_vencido %}Vencido{% else %}Activo{% endif %}">
+          <span class="cred-tab-num">{{ forloop.counter }}</span>
+          <span>MT {{ cred.valor|floatformat:0 }}</span>
+          <span class="cred-tab-status" style="background:{% if cred.em_incumprimento %}var(--danger){% elif cred.esta_vencido %}var(--warn){% else %}var(--success){% endif %}"></span>
+        </button>
+        {% endfor %}
+      </div>
+      <div style="height:1px;background:var(--border);margin:0 16px"></div>
+      {% else %}
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-coins"></i> Resumo Financeiro</div>
+      </div>
+      {% endif %}
+
+      <!-- Painel por crédito -->
+      {% for cred in creditos_activos %}
+      <div class="cred-painel {% if forloop.counter0 == credito_sel_idx %}active{% endif %}" id="painel-{{ forloop.counter0 }}">
+        <div class="card-body" style="padding-top:{% if creditos_activos|length > 1 %}14px{% else %}0{% endif %}">
+
+          {% if creditos_activos|length > 1 %}
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">
+            Crédito {{ forloop.counter }} de {{ creditos_activos|length }}
+          </div>
+          {% endif %}
+
+          <div class="detail-row"><span class="detail-key">Capital</span><span class="detail-val td-mono">MT {{ cred.valor|floatformat:2 }}</span></div>
+          <div class="detail-row"><span class="detail-key">Taxa Juro</span><span class="detail-val">{{ cred.taxa_juros }}% ao mês</span></div>
+          <div class="detail-row"><span class="detail-key">Juros</span><span class="detail-val td-mono" style="color:var(--warn)">MT {{ cred.juros_valor|floatformat:2 }}</span></div>
+          <div class="detail-row"><span class="detail-key">Total no prazo</span>
+            <span class="detail-val td-mono" style="color:var(--accent);font-weight:700;font-size:16px">MT {{ cred.total_a_pagar|floatformat:2 }}</span>
+          </div>
+
+          <!-- Barra de progresso do crédito -->
+          <div style="margin:10px 0">
+            <div style="height:6px;background:var(--border);border-radius:20px;overflow:hidden">
+              <div style="height:100%;width:{{ cred.percentual_pago }}%;background:{% if cred.em_incumprimento %}var(--danger){% elif cred.esta_vencido %}var(--warn){% else %}var(--success){% endif %};border-radius:20px"></div>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">{{ cred.percentual_pago }}% pago</div>
+          </div>
+
+          {% if cred.is_parcial %}
+          <div style="height:1px;background:var(--border);margin:8px 0"></div>
+          <div class="detail-row"><span class="detail-key">Já pago</span><span class="detail-val td-mono" style="color:var(--success)">MT {{ cred.total_pago_parcial|floatformat:2 }}</span></div>
+          <div class="detail-row"><span class="detail-key">Saldo restante</span><span class="detail-val td-mono" style="color:var(--warn);font-weight:700">MT {{ cred.saldo_restante|floatformat:2 }}</span></div>
+          {% endif %}
+
+          <div style="height:1px;background:var(--border);margin:8px 0"></div>
+          <div class="detail-row"><span class="detail-key">Multa/dia</span><span class="detail-val" style="color:var(--danger)">{{ cred.taxa_multa }}%</span></div>
+          <div class="detail-row"><span class="detail-key">Tolerância</span><span class="detail-val">{{ cred.prazo_multa_dias }} dias</span></div>
+
+          {% if cred.mora_composta > 0 %}
+          <div class="detail-row"><span class="detail-key" style="color:var(--danger)">Multa actual</span>
+            <span class="detail-val td-mono" style="color:var(--danger);font-weight:700">MT {{ cred.mora_composta|floatformat:2 }}</span>
+          </div>
+          <div class="detail-row" style="border:none">
+            <span class="detail-key" style="color:var(--danger);font-weight:700">TOTAL C/ MULTA</span>
+            <span class="detail-val td-mono" style="color:var(--danger);font-size:17px;font-weight:700">MT {{ cred.total_com_multa|floatformat:2 }}</span>
+          </div>
+          {% endif %}
+
+          <div style="font-size:11px;color:var(--text3);margin-top:8px">
+            Início: {{ cred.data_inicio|date:"d/m/Y" }} · Vence: {{ cred.vencimento|date:"d/m/Y" }}
+          </div>
+
+          {% if creditos_activos|length > 1 %}
+          <div style="margin-top:12px">
+            <a href="{% url 'lancamento_novo' emp.pk %}?credito={{ cred.pk }}"
+               class="btn btn-success btn-full btn-sm">
+              <i class="fa-solid fa-money-bill-wave"></i> Lançar Pagamento — Créd. {{ forloop.counter }}
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <!-- Sem créditos — resumo global do empréstimo -->
+      <div class="card-body">
+        <div class="detail-row"><span class="detail-key">Capital</span><span class="detail-val td-mono">MT {{ emp.valor|floatformat:2 }}</span></div>
+        <div class="detail-row"><span class="detail-key">Taxa de Juro</span><span class="detail-val">{{ emp.taxa_juros }}% ao mês</span></div>
+        <div class="detail-row"><span class="detail-key">Juros (1 mês)</span><span class="detail-val td-mono" style="color:var(--warn)">MT {{ emp.juros_valor|floatformat:2 }}</span></div>
+        <div class="detail-row"><span class="detail-key">Total no prazo</span><span class="detail-val td-mono" style="color:var(--accent);font-weight:700">MT {{ emp.total_a_pagar|floatformat:2 }}</span></div>
+        <div style="height:1px;background:var(--border);margin:12px 0"></div>
+        {% if emp.is_parcial %}
+        <div class="detail-row"><span class="detail-key">Já pago</span><span class="detail-val td-mono" style="color:var(--success);font-weight:700">MT {{ emp.total_pago_parcial|floatformat:2 }}</span></div>
+        <div class="detail-row"><span class="detail-key">Saldo restante</span><span class="detail-val td-mono" style="color:var(--warn);font-weight:700">MT {{ emp.saldo_restante|floatformat:2 }}</span></div>
+        <div style="height:1px;background:var(--border);margin:12px 0"></div>
+        {% endif %}
+        <div class="detail-row"><span class="detail-key">Multa por dia</span><span class="detail-val" style="color:var(--danger)">{{ emp.taxa_multa }}%</span></div>
+        <div class="detail-row"><span class="detail-key">Dias de tolerância</span><span class="detail-val">{{ emp.prazo_multa_dias }} dias</span></div>
+        {% if emp.mora_composta > 0 %}
+        <div class="detail-row"><span class="detail-key">Multa atual</span><span class="detail-val td-mono" style="color:var(--danger);font-weight:700">MT {{ emp.mora_composta|floatformat:2 }}</span></div>
+        <div class="detail-row" style="border:none">
+          <span class="detail-key">Total com multa</span>
+          <span class="detail-val td-mono" style="color:var(--danger);font-size:17px;font-weight:700">MT {{ emp.total_com_multa|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Datas e Fluxo -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-calendar-alt"></i> Datas e Informações</div>
+      </div>
+      <div class="card-body">
+        <div class="detail-row"><span class="detail-key">Registo</span><span class="detail-val">{{ emp.data_registo|date:"d/m/Y H:i" }}</span></div>
+        <div class="detail-row"><span class="detail-key">Início</span><span class="detail-val">{{ emp.data_inicio|date:"d/m/Y" }}</span></div>
+        <div class="detail-row"><span class="detail-key">Vencimento</span>
+          <span class="detail-val {% if emp.esta_vencido or emp.em_incumprimento %}text-danger font-weight-bold{% endif %}">
+            {{ emp.data_vencimento|date:"d/m/Y"|default:"—" }}
+          </span>
+        </div>
+        {% if emp.dias_atraso > 0 %}
+        <div class="detail-row"><span class="detail-key">Dias em atraso</span><span class="detail-val text-danger font-weight-bold">{{ emp.dias_atraso }}d</span></div>
+        {% endif %}
+        {% if emp.data_ultimo_pagamento %}
+        <div class="detail-row"><span class="detail-key">Último pagamento</span><span class="detail-val">{{ emp.data_ultimo_pagamento|date:"d/m/Y" }}</span></div>
+        {% endif %}
+        <div class="detail-row"><span class="detail-key">Sector</span><span class="detail-val">{{ emp.sector }}</span></div>
+        <div class="detail-row"><span class="detail-key">Score</span><span class="detail-val"><span class="badge score-{{ emp.score }}">{{ emp.score }}</span></span></div>
+        <div class="detail-row"><span class="detail-key">Registado por</span><span class="detail-val">{{ emp.registado_por|default:"—" }}</span></div>
+        <div class="detail-row"><span class="detail-key">Aprovado por</span><span class="detail-val">{{ emp.aprovado_por|default:"—" }}</span></div>
+      </div>
+    </div>
+
+    <!-- Documentos -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-file-alt"></i> Documentos</div>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <a href="{% url 'visualizar_contrato' emp.pk %}" class="btn btn-secondary btn-full" target="_blank">
+          <i class="fa-solid fa-eye"></i> Pré-visualizar Contrato
+        </a>
+        <a href="{% url 'pdf_declaracao' emp.pk %}" class="btn btn-secondary btn-full" target="_blank">
+          <i class="fa-solid fa-file-invoice"></i> Declaração de Dívida
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MODALS (menos a de crédito) ═══════════════════════ -->
+<!-- Modal: Cancelar Multa -->
+<div class="osm-modal-backdrop" id="modalCancelarMulta">
+  <div class="osm-modal">
+    <div class="osm-modal-header">
+      <div class="modal-icon" style="background:var(--warn-l);color:var(--warn)">
+        <i class="fa-solid fa-ban"></i>
+      </div>
+      <div>
+        <div class="modal-title">Cancelar Multa</div>
+        <div class="modal-sub">{{ emp.nome }} — {{ emp.numero_contrato }}</div>
+      </div>
+    </div>
+    <form method="post" action="{% url 'cancelar_multa' emp.pk %}">
+      {% csrf_token %}
+      <div class="osm-modal-body">
+        <div style="background:var(--warn-l);border-radius:10px;padding:12px;font-size:13px;color:#bf360c;margin-bottom:16px">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          A mora vai a zero. Pode reactivar depois se necessário.
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Motivo do cancelamento (opcional)</label>
+          <textarea name="motivo" class="form-control" rows="3"
+                    placeholder="Ex: Acordo com o cliente, pagamento em atraso justificado..."></textarea>
+        </div>
+      </div>
+      <div class="osm-modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modalCancelarMulta')">Cancelar</button>
+        <button type="submit" class="btn btn-outline" style="color:var(--warn);border-color:var(--warn)">
+          <i class="fa-solid fa-ban"></i> Confirmar Cancelamento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Enviar para Tribunal -->
+<div class="osm-modal-backdrop" id="modalTribunal">
+  <div class="osm-modal">
+    <div class="osm-modal-header">
+      <div class="modal-icon" style="background:var(--danger-l);color:var(--danger)">
+        <i class="fa-solid fa-gavel"></i>
+      </div>
+      <div>
+        <div class="modal-title" style="color:var(--danger)">Enviar para Tribunal</div>
+        <div class="modal-sub">{{ emp.nome }} — {{ emp.numero_contrato }}</div>
+      </div>
+    </div>
+    <form method="post" action="{% url 'enviar_tribunal' emp.pk %}">
+      {% csrf_token %}
+      <div class="osm-modal-body">
+        <div style="background:var(--danger-l);border-radius:10px;padding:12px;font-size:13px;color:var(--danger);margin-bottom:16px">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <strong>Atenção:</strong> A mora vai congelar e o status passa para <strong>Caso de Tribunal</strong>. Esta acção não pode ser desfeita facilmente.
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label form-label-required">Motivo do envio para tribunal</label>
+          <textarea name="motivo" class="form-control" rows="3" required
+                    placeholder="Descreva o motivo do envio para tribunal..."></textarea>
+        </div>
+      </div>
+      <div class="osm-modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modalTribunal')">Cancelar</button>
+        <button type="submit" class="btn btn-danger">
+          <i class="fa-solid fa-gavel"></i> Confirmar Envio
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Eliminar Empréstimo -->
+<div class="osm-modal-backdrop" id="modalEliminar">
+  <div class="osm-modal">
+    <div class="osm-modal-header">
+      <div class="modal-icon" style="background:var(--danger-l);color:var(--danger)">
+        <i class="fa-solid fa-trash-alt"></i>
+      </div>
+      <div>
+        <div class="modal-title" style="color:var(--danger)">Eliminar Empréstimo</div>
+        <div class="modal-sub">{{ emp.nome }} — {{ emp.numero_contrato }}</div>
+      </div>
+    </div>
+    <form method="post" action="{% url 'emprestimo_eliminar' emp.pk %}">
+      {% csrf_token %}
+      <div class="osm-modal-body">
+        <div style="background:var(--danger-l);border-radius:10px;padding:16px;font-size:14px;color:var(--danger);text-align:center">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size:28px;margin-bottom:10px;display:block"></i>
+          <strong>Esta acção é irreversível!</strong><br>
+          O empréstimo <strong>{{ emp.numero_contrato }}</strong> e todos os seus dados serão eliminados permanentemente.
+        </div>
+      </div>
+      <div class="osm-modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modalEliminar')">Cancelar</button>
+        <button type="submit" class="btn btn-danger">
+          <i class="fa-solid fa-trash-alt"></i> Eliminar Definitivamente
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- htmx loaded in base.html -->
+
+<!-- LIGHTBOX -->
+<div id="lb" onclick="if(event.target===this)fecharLb()">
+  <button id="lb-close" onclick="fecharLb()" style="position:fixed;top:20px;right:24px;color:white;font-size:30px;cursor:pointer;background:rgba(255,255,255,.15);border:none;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center">&times;</button>
+  <img id="lb-img" src="" alt="" style="max-width:88vw;max-height:84vh;border-radius:10px;object-fit:contain">
+  <div id="lb-caption" style="color:rgba(255,255,255,.65);font-size:12px;margin-top:10px"></div>
+  <div id="lb-nav" style="position:fixed;bottom:24px;display:flex;gap:10px">
+    <button onclick="navLb(-1)" style="background:rgba(255,255,255,.15);border:none;color:white;padding:8px 18px;border-radius:20px;font-size:13px;cursor:pointer"><i class="fa-solid fa-chevron-left"></i> Ant.</button>
+    <button onclick="navLb(1)" style="background:rgba(255,255,255,.15);border:none;color:white;padding:8px 18px;border-radius:20px;font-size:13px;cursor:pointer">Próx. <i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+</div>
+<script>
+// ─── SELECTOR DE CRÉDITO ─────────────────────────────
+window.selectCred = function(idx, btn) {
+  // Troca tabs
+  document.querySelectorAll('.cred-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  // Troca painéis direitos
+  document.querySelectorAll('.cred-painel').forEach(p => p.classList.remove('active'));
+  const p = document.getElementById('painel-' + idx);
+  if (p) p.classList.add('active');
+  // Troca card de estado esquerdo
+  document.querySelectorAll('.cred-status-card').forEach(c => c.style.display = 'none');
+  const sc = document.getElementById('status-card-' + idx);
+  if (sc) sc.style.display = 'block';
+};
+
+// ─── LIGHTBOX ─────────────────────────────────────────
+(function() {
+  const lbImgs = [];
+  let lbIdx = 0;
+  document.addEventListener('DOMContentLoaded', function() {
+    // Lightbox
+    document.querySelectorAll('.img-thumb').forEach(function(img, i) {
+      lbImgs.push({ src: img.src, caption: img.alt || '' });
+      img.addEventListener('click', function() {
+        lbIdx = i;
+        document.getElementById('lb-img').src = img.src;
+        document.getElementById('lb-caption').textContent = img.alt || '';
+        document.getElementById('lb').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    var lbNav = document.getElementById('lb-nav');
+    if (lbNav && lbImgs.length <= 1) lbNav.style.display = 'none';
+  });
+  window.fecharLb = function() {
+    document.getElementById('lb').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+  window.navLb = function(dir) {
+    lbIdx = (lbIdx + dir + lbImgs.length) % lbImgs.length;
+    document.getElementById('lb-img').src = lbImgs[lbIdx].src;
+    document.getElementById('lb-caption').textContent = lbImgs[lbIdx].caption;
+  };
+  document.addEventListener('keydown', function(e) {
+    var lb = document.getElementById('lb');
+    if (!lb || !lb.classList.contains('open')) return;
+    if (e.key === 'Escape') window.fecharLb();
+    if (e.key === 'ArrowLeft') window.navLb(-1);
+    if (e.key === 'ArrowRight') window.navLb(1);
+  });
+})();
+window.fecharModal = function(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.remove('open');
+};
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('osm-modal-backdrop')) {
+    window.fecharModal(e.target.id);
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.osm-modal-backdrop.open').forEach(m => window.fecharModal(m.id));
+  }
+});
+
+// Pequeno ajuste para que o botão "Novo Crédito" mostre correctamente o spinner via classe .htmx-request
+document.body.addEventListener('htmx:beforeRequest', function(evt) {
+  if (evt.target.closest('[hx-get*="adicionar_credito_form"]')) {
+    const btn = evt.target.closest('.btn');
+    if (btn) btn.classList.add('htmx-request');
+  }
+});
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+  if (evt.target.closest('[hx-get*="adicionar_credito_form"]')) {
+    const btn = evt.target.closest('.btn');
+    if (btn) btn.classList.remove('htmx-request');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — OSM Microcrédito</title>
+
+<!-- ✅ FONT AWESOME -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+
+<style>
+:root{--ink:#0a1628;--ink2:#1e3a5f;--gold:#c9a84c;--blue:#1565c0;--white:#fff;--gray:#64748b;--light:#f1f5f9;--cream:#f8f4ed;--ff:'Plus Jakarta Sans',system-ui,sans-serif;--ffd:'Playfair Display',serif;}
+[data-theme=dark]{--white:#1e293b;--light:#0f172a;--cream:#0f172a;--gray:#94a3b8;--ink:#e2e8f0;}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:var(--ff);
+  background:var(--cream);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  color:var(--ink)
+}
+
+.login-wrap{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  max-width:860px;
+  width:100%;
+  border-radius:24px;
+  overflow:hidden;
+  box-shadow:0 20px 60px rgba(10,22,40,.15);
+}
+
+.login-brand{
+  background:linear-gradient(150deg,var(--ink) 0%,var(--ink2) 60%,#1565c0 100%);
+  padding:48px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
+.lb-logo{display:flex;align-items:center;gap:12px;margin-bottom:40px;}
+.lb-icon{
+  width:48px;height:48px;border-radius:12px;
+  background:rgba(201,168,76,.2);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--gold);font-weight:700;
+}
+
+.lb-headline{font-family:var(--ffd);font-size:32px;color:#fff;margin-bottom:16px;}
+.lb-desc{font-size:14px;color:rgba(255,255,255,.6);}
+
+.lb-features{margin-top:25px;display:flex;flex-direction:column;gap:10px;}
+.lb-feat{display:flex;align-items:center;gap:10px;font-size:13px;color:#ddd;}
+.lb-feat-icon{
+  width:28px;height:28px;border-radius:8px;
+  background:rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;
+}
+
+.login-form-wrap{background:var(--white);padding:48px;}
+
+.lf-title{font-family:var(--ffd);font-size:26px;margin-bottom:6px;}
+.lf-sub{font-size:14px;color:var(--gray);}
+
+.form-group{margin-bottom:16px;}
+.form-group label{
+  font-size:11px;font-weight:700;
+  color:var(--gray);margin-bottom:5px;display:block;
+}
+
+.input-wrap{
+  position:relative;
+}
+
+.input-wrap i{
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--gray);
+}
+
+.form-group input{
+  width:100%;
+  padding:12px 12px 12px 38px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  background:var(--light);
+}
+
+.form-group input:focus{
+  border-color:var(--blue);
+  outline:none;
+}
+
+.lf-btn{
+  display:flex; align-items:center; justify-content:center;
+  width:100%;
+  padding:14px;
+  background:var(--ink);
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.lf-btn:hover{background:var(--blue);}
+
+.lf-error{
+  background:#fdecea;
+  border:1px solid #f5c2c0;
+  padding:10px;
+  border-radius:8px;
+  margin-bottom:12px;
+  color:#b71c1c;
+  font-size:13px;
+}
+
+.lf-back{
+  display:block;
+  text-align:center;
+  margin-top:15px;
+  font-size:13px;
+  color:var(--gray);
+}
+
+.theme-btn{
+  position:fixed;
+  top:16px;
+  right:16px;
+  width:40px;height:40px;
+  border-radius:50%;
+  background:var(--ink);
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+
+@media(max-width:700px){
+  .login-wrap{grid-template-columns:1fr}
+  .login-brand{display:none}
+}
+@keyframes lf-spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+
+<body>
+
+<button class="theme-btn" id="tbtn" onclick="toggleTheme()">
+  <i class="fa-solid fa-moon"></i>
+</button>
+
+<div class="login-wrap">
+
+  <!-- LADO ESQUERDO -->
+  <div class="login-brand">
+    <div>
+      <div class="lb-logo">
+       <div class="lb-icon" style="padding:0; background:#ffff; border:none">
+         <img src="{% static 'images/logo/logo.png' %}" alt="OSM Logo" style="width:100%;height:100%;object-fit:contain;">
+       </div>
+        <div>
+          <div style="color:#fff;font-weight:600">OSM Microcrédito</div>
+          <small style="color:#bbb">Portal Digital</small>
+        </div>
+      </div>
+
+      <h2 class="lb-headline">A banca que chega a si</h2>
+      <p class="lb-desc">Gestão completa de microcrédito num só lugar.</p>
+
+      <div class="lb-features">
+        <div class="lb-feat">
+          <div class="lb-feat-icon"><i class="fa-solid fa-lock"></i></div>
+          Acesso seguro
+        </div>
+        <div class="lb-feat">
+          <div class="lb-feat-icon"><i class="fa-solid fa-file-pdf"></i></div>
+          Contratos automáticos
+        </div>
+        <div class="lb-feat">
+          <div class="lb-feat-icon"><i class="fa-solid fa-sms"></i></div>
+          SMS integrado
+        </div>
+        <div class="lb-feat">
+          <div class="lb-feat-icon"><i class="fa-solid fa-chart-line"></i></div>
+          Relatórios em tempo real
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM -->
+  <div class="login-form-wrap">
+
+    <h2 class="lf-title">Bem-vindo</h2>
+    <p class="lf-sub">Entre com as suas credenciais</p>
+
+    {% if erro %}
+    <div class="lf-error">
+      <i class="fa-solid fa-triangle-exclamation"></i> {{ erro }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label>Username</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-user"></i>
+          <input type="text" name="username" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" name="senha" required>
+        </div>
+      </div>
+
+      <button type="submit" class="lf-btn" id="lf-submit-btn">
+        <span class="lf-spinner" id="lf-spinner" style="display:none; width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:white; border-radius:50%; animation:lf-spin .7s linear infinite; margin-right:8px; flex-shrink:0"></span>
+        <i class="fa-solid fa-right-to-bracket" id="lf-icon"></i> <span id="lf-label">  Entrar</span>
+      </button>
+    </form>
+
+    <a href="{% url 'landing' %}" class="lf-back">
+      <i class="fa-solid fa-arrow-left"></i> Voltar
+    </a>
+
+  </div>
+</div>
+
+<script>
+function toggleTheme(){
+  const h=document.documentElement;
+  const d=h.getAttribute('data-theme')==='dark';
+  h.setAttribute('data-theme',d?'light':'dark');
+}
+
+// Spinner no botão de login
+(function(){
+  var form = document.querySelector('form');
+  if (!form) return;
+  form.addEventListener('submit', function(){
+    var btn = document.getElementById('lf-submit-btn');
+    var spinner = document.getElementById('lf-spinner');
+    var icon = document.getElementById('lf-icon');
+    var label = document.getElementById('lf-label');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.75'; }
+    if (spinner) spinner.style.display = 'inline-block';
+    if (icon) icon.style.display = 'none';
+    if (label) label.textContent = 'A entrar...';
+  });
+})();
+</script>
+
+</body>
+</html>

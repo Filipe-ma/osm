@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>{{ assunto|default:"Aviso de Cobrança — OSM Microcrédito" }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body, html { margin:0; padding:0; width:100%; background:#f0f4f8; font-family:'Segoe UI',Arial,sans-serif; }
+table { border-collapse:collapse; }
+a { color:#1565c0; text-decoration:none; }
+
+.wrapper  { width:100%; background:#f0f4f8; padding:24px 0; }
+.container{ max-width:600px; margin:0 auto; }
+
+/* Header */
+.header-outer { background:linear-gradient(135deg,#0d47a1 0%,#1565c0 60%,#1976d2 100%); border-radius:12px 12px 0 0; overflow:hidden; }
+.header-inner { padding:28px 36px 22px; }
+.logo-row     { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+.logo-sq      { width:44px; height:44px; border-radius:10px; background:rgba(255,255,255,.15); border:1.5px solid rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; color:#fff; flex-shrink:0; }
+.co-name      { font-size:14px; font-weight:800; color:#fff; line-height:1.2; }
+.co-sub       { font-size:9.5px; color:rgba(255,255,255,.6); margin-top:1px; }
+.h-title      { font-size:21px; font-weight:900; color:#fff; line-height:1.2; margin-bottom:5px; }
+.h-sub        { font-size:12.5px; color:rgba(255,255,255,.8); line-height:1.5; }
+.h-ref        { display:inline-block; margin-top:12px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25); border-radius:20px; padding:4px 14px; font-size:10.5px; color:rgba(255,255,255,.9); font-family:'Courier New',monospace; }
+
+/* Status bars */
+.bar-red   { background:#c62828; padding:9px 36px; display:flex; align-items:center; gap:10px; }
+.bar-green { background:#1b5e20; padding:9px 36px; display:flex; align-items:center; gap:10px; }
+.bar-blue  { background:#00695c; padding:9px 36px; display:flex; align-items:center; gap:10px; }
+.bar-ico   { font-size:16px; line-height:1; }
+.bar-txt   { font-size:11.5px; font-weight:700; color:#fff; flex:1; }
+.bar-badge { background:rgba(255,255,255,.2); border-radius:20px; padding:2px 12px; font-size:10.5px; font-weight:800; color:#fff; }
+
+/* Body */
+.body-outer { background:#fff; padding:28px 36px; }
+.greeting   { font-size:15.5px; font-weight:700; color:#111; margin-bottom:8px; }
+.intro      { font-size:13px; color:#475569; line-height:1.7; margin-bottom:20px; }
+
+/* Valor solicitado highlight */
+.valor-banner {
+  background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:9px;
+  padding:13px 16px; display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:14px;
+}
+.valor-left  { flex:1; }
+.valor-tag   { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#1565c0; font-weight:800; }
+.valor-ext   { font-size:10px; color:#64748b; font-style:italic; margin-top:2px; }
+.valor-amt   { font-size:22px; font-weight:900; color:#1565c0; font-family:'Courier New',monospace; white-space:nowrap; }
+
+/* Info block */
+.info-block { background:#f8fafc; border:1px solid #e2e8f0; border-radius:9px; padding:15px 18px; margin-bottom:14px; }
+.info-title { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:#1565c0; border-bottom:1.5px solid #e2e8f0; padding-bottom:7px; margin-bottom:10px; }
+.info-row   { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:.5px solid #f1f5f9; gap:12px; }
+.info-row:last-child { border-bottom:none; }
+.info-k     { font-size:11.5px; color:#64748b; flex-shrink:0; }
+.info-v     { font-size:12.5px; font-weight:700; color:#111; text-align:right; }
+.info-v.mono{ font-family:'Courier New',monospace; font-size:11.5px; }
+.info-v.red { color:#c62828; }
+.info-v.blue{ color:#1565c0; }
+.info-ext   { font-size:9.5px; color:#94a3b8; font-style:italic; display:block; text-align:right; }
+
+/* Total box */
+.total-box {
+  background:rgba(198,40,40,.04); border:2px solid #c62828; border-radius:9px;
+  padding:14px 18px; margin-bottom:15px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.total-left-col { flex:1; }
+.total-tag2     { font-size:8.5px; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; }
+.total-desc2    { font-size:11.5px; color:#475569; margin-top:2px; line-height:1.5; }
+.total-ext2     { font-size:9.5px; color:#94a3b8; font-style:italic; margin-top:3px; }
+.total-amt      { font-size:26px; font-weight:900; color:#c62828; font-family:'Courier New',monospace; letter-spacing:-1px; white-space:nowrap; }
+
+/* Payment box */
+.pay-box   { background:#eff6ff; border:1.5px solid #1565c0; border-radius:9px; padding:14px 18px; margin-bottom:16px; }
+.pay-title { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:#1565c0; margin-bottom:11px; }
+.pay-grid  { display:flex; gap:8px; }
+.pay-item  { flex:1; background:#fff; border-radius:7px; border:.5px solid #dbeafe; padding:9px 10px; }
+.pay-l     { font-size:8px; text-transform:uppercase; letter-spacing:.8px; color:#94a3b8; margin-bottom:3px; }
+.pay-v     { font-size:10.5px; font-weight:800; color:#111; font-family:'Courier New',monospace; word-break:break-all; }
+.pay-s     { font-size:9px; color:#64748b; margin-top:2px; }
+
+/* CTA */
+.cta-wrap { text-align:center; margin:20px 0; }
+.cta-btn  { display:inline-block; padding:12px 30px; background:linear-gradient(135deg,#1565c0,#0d47a1); color:#fff !important; font-size:13.5px; font-weight:800; border-radius:8px; text-decoration:none !important; }
+.cta-sub  { font-size:10.5px; color:#94a3b8; margin-top:7px; }
+
+/* Legal */
+.legal    { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:13px 15px; margin-top:16px; }
+.legal p  { font-size:10px; color:#64748b; line-height:1.7; }
+
+.divider  { border:none; border-top:1px solid #e2e8f0; margin:18px 0; }
+
+/* Footer */
+.footer-outer { background:#0a1628; border-radius:0 0 12px 12px; padding:18px 36px 22px; }
+.footer-brand { font-size:12.5px; font-weight:800; color:#90caf9; margin-bottom:5px; }
+.footer-info  { font-size:10px; color:#64748b; line-height:1.8; }
+.footer-copy  { font-size:9px; color:#374151; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.07); }
+
+@media only screen and (max-width:480px) {
+  .header-inner,.body-outer,.footer-outer { padding:18px !important; }
+  .bar-red,.bar-green,.bar-blue { padding:9px 18px !important; }
+  .pay-grid  { flex-direction:column !important; }
+  .total-box { flex-direction:column !important; }
+  .valor-banner { flex-direction:column !important; gap:6px !important; }
+}
+</style>
+</head>
+<body>
+{% load osm_tags %}
+
+<div class="wrapper">
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header-outer">
+    <div class="header-inner">
+      <div class="logo-row">
+        <div class="logo-sq">OSM</div>
+        <div>
+          <div class="co-name">Office Semente Microcrédito</div>
+          <div class="co-sub">E.I. · NUIT 150493129</div>
+        </div>
+      </div>
+      <div class="h-title">
+        {% if tipo == 'atraso' %}⚠ Aviso de Cobrança
+        {% elif tipo == 'urgente' %}🔴 Cobrança Urgente
+        {% elif tipo == 'juridico' %}⚖ Aviso Legal
+        {% elif tipo == 'lembrete' %}🔔 Lembrete de Pagamento
+        {% elif tipo == 'aprovacao' %}✅ Crédito Aprovado
+        {% elif tipo == 'boas_vindas' %}🎉 Bem-vindo à OSM Microcrédito
+        {% elif tipo == 'quitacao' %}🏆 Contrato Quitado
+        {% elif tipo == 'credenciais' %}🔑 Credenciais de Acesso
+        {% else %}📋 Notificação de Conta
+        {% endif %}
+      </div>
+      <div class="h-sub">{{ subtitulo|default:"Informação referente ao seu contrato de microcrédito" }}</div>
+      <div class="h-ref">Ref: {{ emprestimo.numero_contrato }}</div>
+    </div>
+
+    <!-- Status bar -->
+    {% if emprestimo.dias_atraso > 0 %}
+    <div class="bar-red">
+      <span class="bar-ico">⚠</span>
+      <span class="bar-txt">Contrato em Atraso · {{ emprestimo.dias_atraso }} dia(s)</span>
+      <span class="bar-badge">Mora Activa</span>
+    </div>
+    {% elif tipo == 'aprovacao' %}
+    <div class="bar-blue">
+      <span class="bar-ico">✅</span>
+      <span class="bar-txt">Pedido Aprovado · Pronto para levantamento</span>
+      <span class="bar-badge">Aprovado</span>
+    </div>
+    {% elif tipo == 'quitacao' %}
+    <div class="bar-green">
+      <span class="bar-ico">🏆</span>
+      <span class="bar-txt">Contrato liquidado na totalidade — Obrigado!</span>
+      <span class="bar-badge">Quitado</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- BODY -->
+  <div class="body-outer">
+    <p class="greeting">Prezado(a) {{ emprestimo.nome }},</p>
+    <p class="intro">
+      {% if tipo == 'atraso' %}
+        A parcela do contrato <strong>{{ emprestimo.numero_contrato }}</strong> encontra-se em atraso há <strong>{{ emprestimo.dias_atraso }} dia(s)</strong>. Solicitamos a regularização urgente para evitar agravamento dos juros de mora e acções legais.
+      {% elif tipo == 'urgente' %}
+        Este é um aviso <strong>URGENTE</strong>. O contrato <strong>{{ emprestimo.numero_contrato }}</strong> encontra-se em incumprimento. Sem regularização nas próximas 48h, serão desencadeadas medidas adicionais de cobrança.
+      {% elif tipo == 'juridico' %}
+        Informamos que o contrato <strong>{{ emprestimo.numero_contrato }}</strong> será encaminhado para cobrança judicial caso não seja regularizado. Esta é a notificação formal nos termos da legislação moçambicana.
+      {% elif tipo == 'lembrete' %}
+        Este é um lembrete de que a parcela do contrato <strong>{{ emprestimo.numero_contrato }}</strong> vence em breve. Efectue o pagamento atempadamente para evitar juros de mora.
+      {% elif tipo == 'aprovacao' %}
+        Temos o prazer de informar que o seu pedido de microcrédito foi <strong>aprovado</strong>! O capital de <strong>MT {{ emprestimo.valor|floatformat:2 }}</strong> está disponível. Verifique os detalhes abaixo.
+      {% elif tipo == 'boas_vindas' %}
+        Bem-vindo(a) à OSM Microcrédito! O seu contrato foi registado com sucesso. Guarde este email para referência futura.
+      {% elif tipo == 'quitacao' %}
+        Parabéns! O contrato <strong>{{ emprestimo.numero_contrato }}</strong> foi liquidado na totalidade. Agradecemos a confiança e pontualidade.
+      {% else %}
+        Informação importante referente ao contrato <strong>{{ emprestimo.numero_contrato }}</strong>. Por favor reveja os detalhes em baixo.
+      {% endif %}
+    </p>
+
+    <!-- Valor Solicitado -->
+    <div class="valor-banner">
+      <div class="valor-left">
+        <div class="valor-tag">💰 Valor Solicitado — Capital do Empréstimo</div>
+        <div class="valor-ext">{{ emprestimo.valor|por_extenso }}</div>
+      </div>
+      <div class="valor-amt">MT {{ emprestimo.valor|floatformat:2 }}</div>
+    </div>
+
+    <!-- Detalhes do Contrato -->
+    <div class="info-block">
+      <div class="info-title">📋 Detalhes do Contrato</div>
+      <div class="info-row">
+        <span class="info-k">Nº Contrato</span>
+        <span class="info-v mono blue">{{ emprestimo.numero_contrato }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-k">Data de Início</span>
+        <span class="info-v">{{ emprestimo.data_inicio|date:"d/m/Y" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-k">Data de Vencimento</span>
+        <span class="info-v red">{{ emprestimo.data_vencimento|date:"d/m/Y" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-k">Taxa de Juro</span>
+        <span class="info-v">{{ emprestimo.taxa_juros }}% / mês</span>
+      </div>
+      <div class="info-row">
+        <span class="info-k">Total com Juros</span>
+        <div style="text-align:right">
+          <span class="info-v">MT {{ emprestimo.total_a_pagar|floatformat:2 }}</span>
+          <span class="info-ext">{{ emprestimo.total_a_pagar|por_extenso }}</span>
+        </div>
+      </div>
+      {% if emprestimo.dias_atraso > 0 %}
+      <div class="info-row">
+        <span class="info-k">Mora ({{ emprestimo.dias_atraso }}d × {{ banco.taxa_multa_padrao }}%)</span>
+        <span class="info-v red">MT {{ emprestimo.mora_composta|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Total a Pagar -->
+    {% if tipo != 'quitacao' %}
+    <div class="total-box">
+      <div class="total-left-col">
+        <div class="total-tag2">Total a Regularizar Hoje</div>
+        <div class="total-desc2">Capital + Juros{% if emprestimo.dias_atraso > 0 %} + Mora de {{ emprestimo.dias_atraso }} dia(s){% endif %}</div>
+        <div class="total-ext2">({{ emprestimo.total_a_pagar|por_extenso }})</div>
+      </div>
+      <div class="total-amt">MT {{ emprestimo.total_a_pagar|floatformat:2 }}</div>
+    </div>
+
+    <!-- Dados Pagamento -->
+    <div class="pay-box">
+      <div class="pay-title">🏦 Dados para Efectuar o Pagamento</div>
+      <div class="pay-grid">
+        <div class="pay-item">
+          <div class="pay-l">Banco</div>
+          <div class="pay-v" style="font-family:inherit;font-size:10px">{{ banco.banco }}</div>
+          <div class="pay-s">Depósito / transferência</div>
+        </div>
+        <div class="pay-item">
+          <div class="pay-l">Conta · NIB</div>
+          <div class="pay-v">{{ banco.conta }}</div>
+          <div class="pay-s">NIB: {{ banco.nib }}</div>
+        </div>
+        <div class="pay-item">
+          <div class="pay-l">Titular · e-Mola</div>
+          <div class="pay-v" style="font-family:inherit;font-size:9.5px">{{ banco.titular }}</div>
+          <div class="pay-s">e-Mola: {{ banco.emola_numero }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-wrap">
+      <a href="{{ portal_url|default:'#' }}" class="cta-btn">Regularizar Pagamento</a>
+      <p class="cta-sub">Após o pagamento, envie o comprovativo para o seu gestor de crédito.</p>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:20px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;margin-bottom:16px">
+      <div style="font-size:36px;margin-bottom:8px">🏆</div>
+      <div style="font-size:16px;font-weight:800;color:#166534;margin-bottom:4px">Contrato Liquidado com Sucesso!</div>
+      <div style="font-size:12px;color:#16a34a">Obrigado pela sua confiança e pontualidade.</div>
+    </div>
+    {% endif %}
+
+    <hr class="divider">
+
+    <div class="legal">
+      <p>
+        <strong>Aviso:</strong> Email gerado automaticamente pelo sistema OSM Microcrédito.
+        {% if tipo in 'atraso,urgente,juridico' %}Juros de mora: {{ banco.taxa_multa_padrao }}%/dia. O incumprimento pode resultar em acções judiciais.{% endif %}
+        Dúvidas: <strong>+258 87 203 1215</strong> · <a href="mailto:officebernardo@gmail.com">officebernardo@gmail.com</a>.
+        Por favor não responda a este email.
+      </p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-outer">
+    <div class="footer-brand">Office Semente Microcrédito E.I.</div>
+    <div class="footer-info">
+      EN6 Bairro Centro Hípico, Chimoio, Manica, Moçambique<br>
+      NUIT: 150493129 &nbsp;·&nbsp; Tel: +258 87 203 1215 &nbsp;·&nbsp; officebernardo@gmail.com
+    </div>
+    <div class="footer-copy">
+      © {{ ano|default:"2026" }} Office Semente Microcrédito E.I. &nbsp;·&nbsp; Todos os direitos reservados.<br>
+      Este email é confidencial e destinado exclusivamente ao destinatário indicado.
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

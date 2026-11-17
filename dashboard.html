@@ -1,0 +1,628 @@
+<!DOCTYPE html><html lang="pt-BR" data-theme="light"><head><meta charset="UTF-8"><meta
+name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard - Iun IA</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+rel="stylesheet">
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link
+href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+<style>
+/* THEMES */
+:root,[data-theme="light"]{--bg:#f4f5f7;--bg2:#fff;--brd:rgba(0,0,0,.07);
+--brg:rgba(220,38,38,.25);--ac:#dc2626;--al:#fee2e2;
+--ah:#b91c1c;--ag:rgba(220,38,38,.15);--tl:#0891b2;--tl2:#ecfeff;
+--gr:#16a34a;--g2:#dcfce7;--rd:#dc2626;--ye:#d97706;--y2:#fef3c7;
+--pk:#db2777;--tx:#0f172a;--td:#64748b;--tm:#94a3b8;
+--sb:rgba(255,255,255,.96);--tb:rgba(255,255,255,.9);--ib:#f8fafc;
+--bb:#e5e7eb;--ph:#f1f5f9;--th:rgba(220,38,38,.02);
+--sh:0 1px 3px rgba(0,0,0,.06);--sh2:0 10px 30px rgba(0,0,0,.08);
+--cg:rgba(0,0,0,.05);--o1:rgba(220,38,38,.06);--o2:rgba(8,145,178,.04)}
+[data-theme="dark"]{--bg:#06080f;--bg2:#0f1328;--brd:rgba(220,38,38,.12);
+--brg:rgba(220,38,38,.35);--ac:#ef4444;--al:rgba(239,68,68,.08);--ah:#dc2626;
+--ag:rgba(239,68,68,.4);--tl:#06b6d4;--tl2:rgba(6,182,212,.08);
+--gr:#22c55e;--g2:rgba(34,197,94,.08);--rd:#ef4444;--ye:#f59e0b;--y2:rgba(245,158,11,.08);
+--pk:#ec4899;--tx:#e2e8f0;--td:#64748b;--tm:#475569;
+--sb:rgba(12,16,32,.95);--tb:rgba(6,8,15,.85);--ib:rgba(255,255,255,.04);
+--bb:rgba(255,255,255,.06);--ph:rgba(255,255,255,.04);
+--th:rgba(220,38,38,.04);--sh:none;--sh2:0 8px 32px rgba(239,68,68,.08);
+--cg:rgba(255,255,255,.03);--o1:rgba(239,68,68,.08);--o2:rgba(6,182,212,.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);
+overflow-x:hidden;transition:background .3s,color .3s}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bb)}
+::-webkit-scrollbar-thumb{background:var(--ac);border-radius:9px}
+</style>
+  </head>
+<body>
+<div style="position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(220,38,38,.025) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(220,38,38,.025) 1px,transparent 1px);
+  background-size:48px 48px"></div>
+<div style="position:fixed;width:500px;height:500px;border-radius:50%;
+  filter:blur(120px);background:var(--o1);top:-120px;right:-100px;
+  pointer-events:none;z-index:0"></div>
+<div style="position:fixed;width:400px;height:400px;border-radius:50%;
+  filter:blur(120px);background:var(--o2);bottom:-100px;left:-80px;
+  pointer-events:none;z-index:0"></div>
+
+<!-- TOPBAR -->
+<div style="position:fixed;top:0;left:0;right:0;height:64px;
+  background:var(--tb);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--brd);z-index:1000;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;transition:all .3s">
+  <div class="d-flex align-items-center gap-3">
+    <button id="sTog" style="display:none;background:none;border:none;
+      color:var(--tx);font-size:1.2rem;cursor:pointer">
+      <i class="fa-solid fa-bars"></i></button>
+    <div class="d-flex align-items-center gap-3" style="font-weight:800;
+      font-size:1.25rem;text-decoration:none;color:var(--tx)">
+      <div style="width:36px;height:36px;border-radius:10px;
+        background:var(--ac);display:flex;align-items:center;
+        justify-content:center;font-size:.75rem;font-weight:800;color:#fff">IA</div>
+      <span>Iun <span style="color:var(--ac)">IA</span></span>
+    </div>
+  </div>
+  <div class="d-flex align-items-center gap-3" id="topRight">
+    <div class="d-none d-md-block" style="position:relative">
+      <i class="fa-solid fa-search" style="position:absolute;left:.85rem;
+        top:50%;transform:translateY(-50%);color:var(--tm);font-size:.8rem"></i>
+      <input style="background:var(--ib);border:1px solid var(--brd);
+        border-radius:10px;padding:.5rem 1rem .5rem 2.5rem;color:var(--tx);
+        font-size:.85rem;width:240px" placeholder="Pesquisar...">
+    </div>
+    <button id="themeTog" style="width:38px;height:38px;border-radius:10px;
+      border:1px solid var(--brd);background:var(--ib);color:var(--td);
+      display:flex;align-items:center;justify-content:center;cursor:pointer">
+      <i class="fa-solid fa-moon" id="themeI"></i></button>
+    <div style="width:38px;height:38px;border-radius:10px;
+      border:1px solid var(--brd);background:var(--ib);color:var(--td);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;
+      position:relative"><i class="fa-solid fa-bell"></i>
+      <div style="position:absolute;top:8px;right:8px;width:7px;height:7px;
+        border-radius:50%;background:var(--rd)"></div>
+    </div>
+    <div style="width:38px;height:38px;border-radius:10px;
+      border:1px solid var(--brd);background:var(--ib);color:var(--td);
+      display:flex;align-items:center;justify-content:center;cursor:pointer">
+      <i class="fa-solid fa-gear"></i></div>
+    <div class="d-none d-lg-inline-flex" style="display:inline-flex;
+      align-items:center;gap:.4rem;font-size:.72rem;font-weight:600;
+      text-transform:uppercase;color:var(--gr)">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--gr)"
+        class="liveDot"></div> LIVE</div>
+    <div id="avBtn" style="width:36px;height:36px;border-radius:10px;
+      border:2px solid var(--ac);background:var(--al);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:.8rem;color:var(--ac);cursor:pointer">
+      <i class="fa-solid fa-user" style="font-size:.75rem"></i></div>
+    <ul class="dropdown-menu dd-menu" id="ddMenu" style="display:none;
+      position:fixed;right:16px;top:56px;min-width:160px;
+      background:var(--bg2);border:1px solid var(--brd);
+      border-radius:12px;box-shadow:var(--sh2);z-index:9999">
+      <li><a class="dropdown-item" href="#" style="color:var(--tx);
+        font-size:.85rem;border-radius:8px"><i class="fa-solid fa-user me-2"
+        style="color:var(--ac)"></i>Conta</a></li>
+      <li><a class="dropdown-item" href="#" style="color:var(--tx);
+        font-size:.85rem;border-radius:8px"><i class="fa-solid fa-credit-card me-2"
+        style="color:var(--gr)"></i>Faturas</a></li>
+      <li><hr style="border-color:var(--brd)"></li>
+      <li><a class="dropdown-item text-danger" href="#"
+        style="font-size:.85rem;border-radius:8px"><i class="fa-solid
+        fa-right-from-bracket me-2"></i>Sair</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside id="sb" style="position:fixed;top:64px;left:0;bottom:0;width:280px;
+  background:var(--sb);backdrop-filter:blur(20px);
+  border-right:1px solid var(--brd);z-index:900;
+  display:flex;flex-direction:column;padding:1.25rem 0;overflow-y:auto;
+  transition:all .35s">
+  <div style="padding:0 1.25rem;margin-bottom:.75rem"><div style="font-size:.65rem;
+    text-transform:uppercase;letter-spacing:.12em;color:var(--tm);font-weight:600;
+    padding:.25rem 0;margin-bottom:.4rem">Principal</div>
+    <div class="s-link" data-p="visao"><i class="fa-solid fa-chart-pie"></i>
+    <span>Visao Geral</span></div>
+    <div class="s-link" data-p="dominios"><i class="fa-solid fa-globe"></i>
+    <span>Dominios</span><span class="badge-s g">12</span></div>
+    <div class="s-link" data-p="hospedagem"><i class="fa-solid fa-server"></i>
+    <span>Hospedagem</span></div>
+  </div>
+  <div style="padding:0 1.25rem;margin-bottom:.75rem"><div style="font-size:.65rem;
+    text-transform:uppercase;letter-spacing:.12em;color:var(--tm);font-weight:600;
+    padding:.25rem 0;margin-bottom:.4rem">Comunicacoes</div>
+    <div class="s-link" data-p="sms"><i class="fa-solid fa-sms"></i>
+    <span>SMS & Mensagens</span><span class="badge-s">24K</span></div>
+    <div class="s-link" data-p="whatsapp"><i class="fa-brands fa-whatsapp"></i>
+    <span>WhatsApp Chatbot</span><span class="badge-s g">On</span></div>
+    <div class="s-link" data-p="voice"><i class="fa-solid fa-phone-volume"></i>
+    <span>Voice IP</span></div>
+  </div>
+  <div style="padding:0 1.25rem;margin-bottom:.75rem"><div style="font-size:.65rem;
+    text-transform:uppercase;letter-spacing:.12em;color:var(--tm);font-weight:600;
+    padding:.25rem 0;margin-bottom:.4rem">Marketing & Dev</div>
+    <div class="s-link" data-p="marketing"><i class="fa-solid fa-bullhorn"></i>
+    <span>Marketing Digital</span></div>
+    <div class="s-link" data-p="websites"><i class="fa-solid fa-wand-magic-sparkles"></i>
+    <span>Websites IA</span><span class="badge-s r">New</span></div>
+    <div class="s-link" data-p="dev"><i class="fa-solid fa-code"></i>
+    <span>Desenvolvimento</span></div>
+  </div>
+  <div style="padding:0 1.25rem;margin-bottom:.75rem"><div style="font-size:.65rem;
+    text-transform:uppercase;letter-spacing:.12em;color:var(--tm);font-weight:600;
+    padding:.25rem 0;margin-bottom:.4rem">Gestao</div>
+    <div class="s-link" data-p="relatorios"><i class="fa-solid fa-chart-line"></i>
+    <span>Relatorios</span></div>
+    <div class="s-link" data-p="faturamento"><i class="fa-solid fa-credit-card"></i>
+    <span>Faturamento</span></div>
+    <div class="s-link" data-p="equipa"><i class="fa-solid fa-users"></i>
+    <span>Equipa</span></div>
+    <div class="s-link" data-p="suporte"><i class="fa-solid fa-headset"></i>
+    <span>Suporte</span></div>
+  </div>
+  <div style="margin-top:auto;padding:1.25rem;border-top:1px solid var(--brd)">
+    <div class="d-flex align-items-center gap-3">
+      <div style="width:40px;height:40px;border-radius:10px;background:var(--ac);
+        display:flex;align-items:center;justify-content:center;
+        font-weight:800;font-size:.85rem;color:#fff">AB</div>
+      <div style="flex:1"><div style="font-size:.85rem;font-weight:600;
+        color:var(--tx)">Alberto C.</div>
+        <div style="font-size:.72rem;color:var(--td)">Admin</div></div>
+      <a href="#" style="color:var(--td)"><i class="fa-solid fa-right-from-bracket"></i></a>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT AREA -->
+<main id="main" class="main-content" style="margin-left:280px;margin-top:64px;
+  padding:2rem;position:relative;z-index:1;min-height:calc(100vh - 64px)">
+
+  <!-- ===== PAGE: VISAO GERAL ===== -->
+<div class="pg" id="pg-visao">
+  <div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Visao Geral</h5>
+    <p class="mb-0" style="color:var(--td)">Resumo dos seus servicos.</p></div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm" style="border:1px solid var(--brd);
+        border-radius:10px;color:var(--td);background:var(--bg2)">
+        <i class="fa-solid fa-download me-1"></i>Exportar</button>
+      <button class="btn btn-sm" style="background:var(--ac);color:#fff;
+        border-radius:10px"><i class="fa-solid fa-plus me-1"></i>Novo</button>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-lg"><a href="#" class="qa"><i class="fa-solid fa-globe" style="font-size:1.3rem"></i><span>Registar Dominio</span></a></div>
+    <div class="col-6 col-md-3 col-lg"><a href="#" class="qa"><i class="fa-solid fa-paper-plane" style="font-size:1.3rem"></i><span>Enviar SMS</span></a></div>
+    <div class="col-6 col-md-3 col-lg"><a href="#" class="qa"><i class="fa-brands fa-whatsapp" style="font-size:1.3rem"></i><span>Chatbot</span></a></div>
+    <div class="col-6 col-md-3 col-lg"><a href="#" class="qa"><i class="fa-solid fa-phone-volume" style="font-size:1.3rem"></i><span>Voice</span></a></div>
+    <div class="col-6 col-md-3 col-lg"><a href="#" class="qa"><i class="fa-solid fa-wand-magic-sparkles" style="font-size:1.3rem"></i><span>Criar Site</span></a></div>
+  </div>
+  <div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="d-flex justify-content-between"><div class="si r"><i class="fa-solid fa-globe"></i></div><span class="s-ch up"><i class="fa-solid fa-arrow-up"></i>12%</span></div><div class="sl2">Dominios Activos</div><div class="sv">12</div><div class="d-flex gap-2 flex-wrap mt-1"><span class="dp"><i class="fa-solid fa-circle-check" style="color:var(--gr)"></i>10</span><span class="dp"><i class="fa-solid fa-triangle-exclamation" style="color:var(--ye)"></i>2 expiram</span></div></div></div>
+  <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="d-flex justify-content-between"><div class="si t"><i class="fa-solid fa-sms"></i></div><span class="s-ch up"><i class="fa-solid fa-arrow-up"></i>24%</span></div><div class="sl2">SMS Enviados</div><div class="sv">18.435</div><div class="d-flex justify-content-between mt-1" style="font-size:.72rem;color:var(--td)"><span>Entrega</span><span style="color:var(--gr)">97.3%</span></div><div class="bar mt-1"><div class="bf t" style="width:97%"></div></div></div></div>
+  <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="d-flex justify-content-between"><div class="si g"><i class="fa-brands fa-whatsapp"></i></div><span class="s-ch up"><i class="fa-solid fa-arrow-up"></i>38%</span></div><div class="sl2">WhatsApp</div><div class="sv">1.847</div><div style="font-size:.75rem;color:var(--td);margin-top:.25rem">543 conversas hoje</div></div></div>
+  <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="d-flex justify-content-between"><div class="si y"><i class="fa-solid fa-phone-volume"></i></div><span class="s-ch dn"><i class="fa-solid fa-arrow-down"></i>3%</span></div><div class="sl2">Voice Calls</div><div class="sv">4.298</div><div class="d-flex justify-content-between mt-1" style="font-size:.72rem;color:var(--td)"><span>Progresso</span><span style="color:var(--ye)">78%</span></div><div class="bar mt-1"><div class="bf y" style="width:78%"></div></div></div></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="d-flex justify-content-between"><div class="si g"><i class="fa-solid fa-server"></i></div><span class="s-ch up">99.9%</span></div><div class="sl2">Uptime</div><div class="sv">99.99%</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="d-flex justify-content-between"><div class="si r"><i class="fa-solid fa-wand-magic-sparkles"></i></div><span class="s-ch up">+2</span></div><div class="sl2">Sites IA</div><div class="sv">8</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="d-flex justify-content-between"><div class="si t"><i class="fa-solid fa-bullhorn"></i></div><span class="s-ch up">54%</span></div><div class="sl2">Campanhas</div><div class="sv">7</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="d-flex justify-content-between"><div class="si g"><i class="fa-solid fa-receipt"></i></div><span class="s-ch up">18%</span></div><div class="sl2">Receita</div><div class="sv">14.8K</div></div></div>
+  </div>
+  <div class="row g-3">
+    <div class="col-lg-8"><div class="cc">
+      <div class="ch"><h6><i class="fa-solid fa-chart-area me-2" style="color:var(--ac)"></i>Metricas</h6>
+        <div class="ctabs"><span class="c-tab active">7D</span><span class="c-tab">30D</span></div></div>
+      <canvas id="cMain" height="110"></canvas>
+    </div></div>
+    <div class="col-lg-4"><div class="cc h-100">
+      <div class="ch"><h6><i class="fa-solid fa-chart-pie me-2" style="color:var(--tl)"></i>SMS Tipo</h6></div>
+      <canvas id="cDoughnut" height="200"></canvas>
+    </div></div>
+  </div>
+  </div>
+</div>
+
+<script>
+// Shared chart defaults
+function gc(){return getComputedStyle(document.documentElement).getPropertyValue('--cg').trim()||'rgba(0,0,0,.05)'}
+function c1(){new Chart(document.getElementById('cMain'),{type:'line',data:{labels:['Seg','Ter','Qua','Qui','Sex','Sab','Dom'],datasets:[{label:'SMS',data:[2400,3200,2800,3600,4100,3800,2900],borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',borderWidth:2,fill:true,tension:.4,pointRadius:0},{label:'WhatsApp',data:[1800,2100,1900,2600,2800,2400,2100],borderColor:'#0891b2',backgroundColor:'rgba(8,145,178,.06)',borderWidth:2,fill:true,tension:.4,pointRadius:0},{label:'Voice',data:[500,620,580,720,800,700,540],borderColor:'#d97706',borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,plugins:{legend:{labels:{usePointStyle:true,pointStyle:'circle',padding:15}}},scales:{y:{grid:{color:gc()}},x:{grid:{display:false}}}}})}
+function c2(){new Chart(document.getElementById('cDoughnut'),{type:'doughnut',data:{labels:['Promo','Notif','OTP','Outro'],datasets:[{data:[42,31,18,9],backgroundColor:['#dc2626','#0891b2','#16a34a','#d97706'],borderWidth:0,cutout:'72%'}]},options:{responsive:true,plugins:{legend:{display:false}}}}})}
+function cWp(){new Chart(document.getElementById('cWpB'),{type:'bar',data:{labels:['Seg','Ter','Qua','Qui','Sex','Sab','Dom'],datasets:[{data:[80,95,70,110,120,100,68],backgroundColor:'rgba(34,197,94,.5)',borderRadius:8,barThickness:18}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:gc()}},x:{grid:{display:false}}}}})}
+function cSmsB(){new Chart(document.getElementById('cSmsB'),{type:'line',data:{labels:['Seg','Ter','Qua','Qui','Sex','Sab','Dom'],datasets:[{data:[3100,2800,3500,2900,4100,3200,2800],borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:gc()}},x:{grid:{display:false}}}}})}
+function cVoiceB(){new Chart(document.getElementById('cVoiceB'),{type:'line',data:{labels:['Seg','Ter','Qua','Qui','Sex','Sab','Dom'],datasets:[{data:[450,520,480,600,720,680,380],borderColor:'#0891b2',backgroundColor:'rgba(8,145,178,.06)',borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:gc()}},x:{grid:{display:false}}}}})}
+function cMktB(){new Chart(document.getElementById('cMktB'),{type:'bar',data:{labels:['Jan','Fev','Mar','Abr','Mai','Jun'],datasets:[{data:[1200,1800,1500,2100,1900,2340],backgroundColor:'rgba(220,38,38,.5)',borderRadius:8,barThickness:20}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:gc()}},x:{grid:{display:false}}}}})}
+function cMktD(){new Chart(document.getElementById('cMktD'),{type:'doughnut',data:{labels:['Google','Meta','SEO','Outro'],datasets:[{data:[48,32,20,0],backgroundColor:['#dc2626','#0891b2','#16a34a','#94a3b8'],borderWidth:0,cutout:'72%'}]},options:{responsive:true,plugins:{legend:{display:false}}}}})}
+function cDevB(){new Chart(document.getElementById('cDevB'),{type:'bar',data:{labels:['S11','S12','S13','S14','S15'],datasets:[{label:'Commits',data:[18,24,32,28,35],backgroundColor:'rgba(220,38,38,.5)',borderRadius:8,barThickness:18}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:gc()}},x:{grid:{display:false}}}}})}
+function cRelB(){new Chart(document.getElementById('cRelB'),{type:'bar',data:{labels:['Jan','Fev','Mar','Abr','Mai','Jun'],datasets:[{data:[8200,9600,11400,10800,13200,14820],backgroundColor:['rgba(220,38,38,.5)','rgba(220,38,38,.5)','rgba(8,145,178,.5)','rgba(8,145,178,.5)','rgba(22,163,74,.5)','rgba(22,163,74,.5)'],borderRadius:8,barThickness:20}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:gc()}}}}})}
+function cRelD(){new Chart(document.getElementById('cRelD'),{type:'doughnut',data:{labels:['Hosp','SMS','Wpp','Outro'],datasets:[{data:[42,26,16,16],backgroundColor:['#dc2626','#0891b2','#16a34a','#d97706'],borderWidth:0,cutout:'72%'}]},options:{responsive:true,plugins:{legend:{display:false}}}}})}
+function initChartsFor(page){
+  setTimeout(function(){
+    if(page==='visao'){if(!document.getElementById('cMain')==false)c1();if(document.getElementById('cDoughnut'))c2();}
+    if(page==='sms'){if(document.getElementById('cSmsB'))cSmsB();}
+    if(page==='whatsapp'){if(document.getElementById('cWpB'))cWp();}
+    if(page==='voice'){if(document.getElementById('cVoiceB'))cVoiceB();}
+    if(page==='marketing'){if(document.getElementById('cMktB'))cMktB();if(document.getElementById('cMktD'))cMktD();}
+    if(page==='dev'){if(document.getElementById('cDevB'))cDevB();}
+    if(page==='relatorios'){if(document.getElementById('cRelB'))cRelB();if(document.getElementById('cRelD'))cRelD();}
+  },100);
+}
+</script>
+
+<!-- ===== PAGE: DOMINIOS ===== -->
+<div class="pg" id="pg-dominios" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Gestao de Dominios</h5>
+    <p class="mb-0" style="color:var(--td)">12 dominios registados</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px">
+    <i class="fa-solid fa-plus me-1"></i>Registar Novo</button>
+  </div>
+  <div class="cc mb-4">
+    <h6 class="mb-3"><i class="fa-solid fa-magnifying-glass me-2" style="color:var(--ac)"></i>Pesquisar Dominio</h6>
+    <div class="d-flex gap-2 flex-wrap">
+      <input type="text" placeholder="nome-do-dominio" class="flex-grow-1 px-4 py-3" style="border:1px solid var(--brd);border-radius:10px;background:var(--ib);color:var(--tx);font-size:.9rem">
+      <select style="border:1px solid var(--brd);border-radius:10px;background:var(--ib);color:var(--tx);padding:0 1rem;font-size:.85rem"><option>.com</option><option>.co.ao</option><option>.pt</option><option>.io</option><option>.dev</option></select>
+      <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px;padding:.5rem 1.5rem"><i class="fa-solid fa-search me-1"></i>Pesquisar</button>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3"><span class="dp"><i class="fa-solid fa-fire" style="color:var(--rd)"></i>iun.ai</span><span class="dp"><i class="fa-solid fa-fire" style="color:var(--rd)"></i>iun.app</span><span class="dp">iun.cloud</span><span class="dp">iun.digital</span><span class="dp">iun.net</span></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-check-circle"></i></div><div class="sl2">Activos</div><div class="sv">10</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-clock"></i></div><div class="sl2">Expiram</div><div class="sv">2</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-lock"></i></div><div class="sl2">SSL Activos</div><div class="sv">12</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="si r"><i class="fa-solid fa-money-bill"></i></div><div class="sl2">Custo Mes</div><div class="sv">R$ 189</div></div></div>
+  </div>
+  <div class="cc">
+    <div class="ch"><h6><i class="fa-solid fa-globe me-2" style="color:var(--ac)"></i>Lista de Dominios</h6>
+      <div class="ctabs"><span class="c-tab active">Todos</span><span class="c-tab">Activos</span><span class="c-tab">A expirar</span></div></div>
+    <table class="ft"><thead><tr><th>Dominio</th><th>Status</th><th>Expirao</th><th>SSL</th><th>Auto-Renov</th></tr></thead><tbody>
+      <tr><td><strong>iunia.com</strong><span class="badge me-1" style="font-size:.6rem;background:var(--al);color:var(--ac)">Principal</span></td><td><span class="st a"><span class="st.d"></span>Activo</span></td><td style="color:var(--td)">15/08/2027</td><td><span style="color:var(--gr);font-size:.8rem"><i class="fa-solid fa-lock"></i> Valido</span></td><td><i class="fa-solid fa-toggle-on" style="color:var(--gr);cursor:pointer"></i></td></tr>
+      <tr><td><strong>iunia.co.ao</strong></td><td><span class="st a"><span class="sd"></span>Activo</span></td><td style="color:var(--td)">01/03/2027</td><td><span style="color:var(--gr);font-size:.8rem"><i class="fa-solid fa-lock"></i> Valido</span></td><td><i class="fa-solid fa-toggle-on" style="color:var(--gr);cursor:pointer"></i></td></tr>
+      <tr><td><strong>iunia.io</strong></td><td><span class="st w"><span class="sd"></span>Expira</span></td><td style="color:var(--ye)">20/04/2026</td><td><span style="color:var(--gr);font-size:.8rem"><i class="fa-solid fa-lock"></i> Valido</span></td><td><i class="fa-solid fa-toggle-on" style="color:var(--gr);cursor:pointer"></i></td></tr>
+      <tr><td><strong>iunia.pt</strong></td><td><span class="st w"><span class="sd"></span>Expira</span></td><td style="color:var(--ye)">25/04/2026</td><td><span style="color:var(--gr);font-size:.8rem"><i class="fa-solid fa-lock"></i> Valido</span></td><td><i class="fa-solid fa-toggle-off" style="color:var(--tm);cursor:pointer"></i></td></tr>
+      <tr><td><strong>meubanco.ao</strong></td><td><span class="st a"><span class="sd"></span>Activo</span></td><td style="color:var(--td)">12/11/2026</td><td><span style="color:var(--gr);font-size:.8rem"><i class="fa-solid fa-lock"></i> Valido</span></td><td><i class="fa-solid fa-toggle-on" style="color:var(--gr);cursor:pointer"></i></td></tr>
+      <tr><td><strong>fashionluanda.com</strong></td><td><span class="st a"><span class="sd"></span>Activo</span></td><td style="color:var(--td)">30/06/2027</td><td><span style="color:var(--gr);font-size:.8rem"><i class="fa-solid fa-lock"></i> Valido</span></td><td><i class="fa-solid fa-toggle-on" style="color:var(--gr);cursor:pointer"></i></td></tr>
+    </tbody></table>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: HOSPEDAGEM ===== -->
+<div class="pg" id="pg-hospedagem" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Hospedagem</h5>
+    <p class="mb-0" style="color:var(--td)">3 servidores activos</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-plus me-1"></i>Novo Servidor</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-check-circle"></i></div><div class="sl2">Activos</div><div class="sv">3</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="si r"><i class="fa-solid fa-hard-drive"></i></div><div class="sl2">Espaco Usado</div><div class="sv">128G</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-gauge-high"></i></div><div class="sl2">Latencia</div><div class="sv">32ms</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-shield-halved"></i></div><div class="sl2">Uptime</div><div class="sv">99.99%</div></div></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4"><div class="cc h-100"><div class="d-flex justify-content-between mb-2"><div><span class="st a" style="font-size:.7rem"><span class="sd"></span> Online</span><h6 class="mb-0 mt-2">WEB-01 <span style="font-weight:400;font-size:.75rem;color:var(--td)">Nginx</span></h6></div><i class="fa-solid fa-globe" style="color:var(--ac);font-size:1.3rem"></i></div><div style="font-size:.75rem;color:var(--td)">US East <code style="color:var(--ac);font-family:'JetBrains Mono';margin-left:.5rem">web01.iun.io</code></div><div class="mt-3" style="font-size:.8rem"><div class="d-flex justify-content-between mb-1"><span>CPU</span><span style="color:var(--gr)">23%</span></div><div class="bar mb-3"><div class="bf g" style="width:23%"></div></div><div class="d-flex justify-content-between mb-1"><span>RAM</span><span>4.2/8 GB</span></div><div class="bar mb-3"><div class="bf t" style="width:52%"></div></div><div class="d-flex justify-content-between mb-1"><span>Disco</span><span>78/200 GB</span></div><div class="bar"><div class="bf y" style="width:39%"></div></div></div></div></div>
+    <div class="col-lg-4"><div class="cc h-100"><div class="d-flex justify-content-between mb-2"><div><span class="st a" style="font-size:.7rem"><span class="sd"></span> Online</span><h6 class="mb-0 mt-2">API-01 <span style="font-weight:400;font-size:.75rem;color:var(--td)">Node.js</span></h6></div><i class="fa-solid fa-code" style="color:var(--tl);font-size:1.3rem"></i></div><div style="font-size:.75rem;color:var(--td)">EU West <code style="color:var(--ac);font-family:'JetBrains Mono';margin-left:.5rem">api01.iun.io</code></div><div class="mt-3" style="font-size:.8rem"><div class="d-flex justify-content-between mb-1"><span>CPU</span><span style="color:var(--gr)">47%</span></div><div class="bar mb-3"><div class="bf r" style="width:47%"></div></div><div class="d-flex justify-content-between mb-1"><span>RAM</span><span>6.8/16 GB</span></div><div class="bar mb-3"><div class="bf t" style="width:42%"></div></div><div class="d-flex justify-content-between mb-1"><span>Disco</span><span>45/512 GB</span></div><div class="bar"><div class="bf y" style="width:9%"></div></div></div></div></div>
+    <div class="col-lg-4"><div class="cc h-100"><div class="d-flex justify-content-between mb-2"><div><span class="st w" style="font-size:.7rem"><span class="sd"></span> Alto</span><h6 class="mb-0 mt-2">DB-01 <span style="font-weight:400;font-size:.75rem;color:var(--td)">PostgreSQL</span></h6></div><i class="fa-solid fa-database" style="color:var(--ye);font-size:1.3rem"></i></div><div style="font-size:.75rem;color:var(--td)">SA Africa <code style="color:var(--ac);font-family:'JetBrains Mono';margin-left:.5rem">db01.iun.io</code></div><div class="mt-3" style="font-size:.8rem"><div class="d-flex justify-content-between mb-1"><span>CPU</span><span style="color:var(--ye)">72%</span></div><div class="bar mb-3"><div class="bf y" style="width:72%"></div></div><div class="d-flex justify-content-between mb-1"><span>RAM</span><span>14/16 GB</span></div><div class="bar mb-3"><div class="bf r" style="width:88%"></div></div><div class="d-flex justify-content-between mb-1"><span>Disco</span><span>420/512 GB</span></div><div class="bar"><div class="bf r" style="width:82%"></div></div></div></div></div>
+  </div>
+  <div class="cc"><div class="ch"><h6><i class="fa-solid fa-box me-2" style="color:var(--ac)"></i>Planos de Hospedagem</h6></div>
+    <table class="ft"><thead><tr><th>Plano</th><th>Tipo</th><th>Dominio</th><th>Recursos</th><th>Uso</th><th>Preco</th><th>Status</th></tr></thead><tbody>
+      <tr><td><strong>VPS Pro</strong></td><td><span style="font-size:.7rem;background:var(--al);color:var(--ac);padding:.15rem .5rem;border-radius:20px;font-weight:600">VPS</span></td><td>iunia.com</td><td>4vCPU/8GB/200GB</td><td><div class="bar" style="width:50px"><div class="bf g" style="width:45%"></div></div>45%</td><td>R$ 89,90</td><td><span class="st a"><span class="sd"></span>Activo</span></td></tr>
+      <tr><td><strong>Cloud Enterprise</strong></td><td><span style="font-size:.7rem;background:var(--tl2);color:var(--tl);padding:.15rem .5rem;border-radius:20px;font-weight:600">Cloud</span></td><td>iunia.co.ao</td><td>8vCPU/16GB/512GB</td><td><div class="bar" style="width:50px"><div class="bf r" style="width:78%"></div></div>78%</td><td>R$ 249,90</td><td><span class="st a"><span class="sd"></span>Activo</span></td></tr>
+      <tr><td><strong>Dedicated</strong></td><td><span style="font-size:.7rem;background:var(--y2);color:var(--ye);padding:.15rem .5rem;border-radius:20px;font-weight:600">Dedicado</span></td><td>meubanco.ao</td><td>16core/64GB/2TB</td><td><div class="bar" style="width:50px"><div class="bf g" style="width:35%"></div></div>35%</td><td>R$ 799,90</td><td><span class="st a"><span class="sd"></span>Activo</span></td></tr>
+    </tbody></table>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: SMS ===== -->
+<div class="pg" id="pg-sms" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">SMS & Mensagens</h5><p class="mb-0" style="color:var(--td)">18.435 SMS enviados este mes</p></div>
+    <div class="d-flex gap-2"><button class="btn btn-sm" style="border:1px solid var(--brd);border-radius:10px;color:var(--td);background:var(--bg2)"><i class="fa-solid fa-upload me-1"></i>Importar Lista</button><button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-paper-plane me-1"></i>Nova Campanha</button></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="d-flex justify-content-between"><div class="si r"><i class="fa-solid fa-paper-plane"></i></div><span class="s-ch up"><i class="fa-solid fa-arrow-up"></i>24%</span></div><div class="sl2">SMS Enviados</div><div class="sv">18.435</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-check-double"></i></div><div class="sl2">Taxa de Entrega</div><div class="sv">97.3%</div><div class="bar mt-1"><div class="bf g" style="width:97%"></div></div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-coins"></i></div><div class="sl2">Custo Medio</div><div class="sv">R$ 0,012</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-list"></i></div><div class="sl2">Listas</div><div class="sv">8</div><div style="font-size:.72rem;color:var(--td)">12.450 contactos</div></div></div>
+  </div>
+  <div class="cc mb-4"><div class="ch"><h6><i class="fa-solid fa-chart-area me-2" style="color:var(--ac)"></i>Envios Semanal</h6></div><canvas id="cSmsB" height="100"></canvas></div>
+  <div class="row g-3">
+    <div class="col-lg-7"><div class="cc"><div class="ch"><h6><i class="fa-solid fa-clock me-2" style="color:var(--ac)"></i>Campanhas Recentes</h6></div>
+      <table class="ft"><thead><tr><th>Campanha</th><th>Destinatarios</th><th>Entregues</th><th>Taxa</th><th>Status</th></tr></thead><tbody>
+        <tr><td><strong>Promocao Natal</strong></td><td>5.000</td><td>4.865</td><td><span style="color:var(--gr);font-weight:600">97.3%</span></td><td><span class="st a"><span class="sd"></span>Concluida</span></td></tr>
+        <tr><td><strong>Alerta Pagamento</strong></td><td>2.300</td><td>2.280</td><td><span style="color:var(--gr);font-weight:600">99.1%</span></td><td><span class="st a"><span class="sd"></span>Concluida</span></td></tr>
+        <tr><td><strong>Lancamento Produto</strong></td><td>8.500</td><td>3.200</td><td><span style="color:var(--ye);font-weight:600">97%</span></td><td><span class="st w"><span class="sd"></span>Em curso</span></td></tr>
+        <tr><td><strong>OTP Verification</strong></td><td>—</td><td>1.100</td><td><span style="color:var(--gr);font-weight:600">98%</span></td><td><span class="st a"><span class="sd"></span>Automatico</span></td></tr>
+      </tbody></table>
+    </div></div>
+    <div class="col-lg-5"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-paper-plane me-2" style="color:var(--ac)"></i>Enviar SMS Rapido</h6></div><div style="font-size:.85rem"><label style="color:var(--td);font-size:.78rem">Destinatarios</label><textarea class="w-100 mb-3 px-3 py-2" style="border:1px solid var(--brd);border-radius:10px;background:var(--ib);color:var(--tx);min-height:50px;resize:none;font-family:inherit" placeholder="+244 923 456 789, +55 11 99999-0000"></textarea><label style="color:var(--td);font-size:.78rem">Mensagem</label><textarea class="w-100 mb-3 px-3 py-2" style="border:1px solid var(--brd);border-radius:10px;background:var(--ib);color:var(--tx);min-height:70px;resize:none;font-family:inherit" placeholder="Digite sua mensagem..."></textarea><div class="d-flex justify-content-between align-items-center"><span style="font-size:.75rem;color:var(--td)">0/160 caracteres</span><button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-paper-plane me-1"></i>Enviar</button></div></div></div></div>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: WHATSAPP ===== -->
+<div class="pg" id="pg-whatsapp" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">WhatsApp & Chatbot IA</h5><p class="mb-0" style="color:var(--td)">Chatbot activo em tempo real</p></div>
+    <div class="d-flex gap-2"><span class="st a" style="font-size:.75rem"><span class="sd"></span>Online</span><button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-robot me-1"></i>Configurar Bot</button></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-comments"></i></div><div class="s-ch up"><i class="fa-solid fa-arrow-up"></i>38%</div></div><div class="sl2">Conversas Hoje</div><div class="sv">543</div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-robot"></i></div><div class="sl2">Respostas IA</div><div class="sv">94.2%</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-bolt"></i></div><div class="sl2">Tempo Medio</div><div class="sv">1.8s</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc p"><div class="si p"><i class="fa-solid fa-face-smile"></i></div><div class="sl2">Satisfacao</div><div class="sv">4.8</div></div></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4"><div class="cc h-100"><h6 class="mb-3"><i class="fa-solid fa-brain me-2" style="color:var(--ac)"></i>Intents do Chatbot</h6><div style="font-size:.8rem"><div class="d-flex justify-content-between mb-1"><span>Consulta de Saldo</span><span style="font-weight:600">34%</span></div><div class="bar mb-2"><div class="bf g" style="width:34%"></div></div><div class="d-flex justify-content-between mb-1"><span>Agendamento</span><span style="font-weight:600">28%</span></div><div class="bar mb-2"><div class="bf t" style="width:28%"></div></div><div class="d-flex justify-content-between mb-1"><span>Suporte Tecnico</span><span style="font-weight:600">22%</span></div><div class="bar mb-2"><div class="bf r" style="width:22%"></div></div><div class="d-flex justify-content-between mb-1"><span>Vendas</span><span style="font-weight:600">16%</span></div><div class="bar"><div class="bf y" style="width:16%"></div></div></div></div></div>
+    <div class="col-lg-4"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-chart-bar me-2" style="color:var(--tl)"></i>Conversas Semanal</h6></div><canvas id="cWpB" height="200"></canvas></div></div>
+    <div class="col-lg-4"><div class="cc h-100"><h6 class="mb-3"><i class="fa-solid fa-message me-2" style="color:var(--ac)"></i>Ultimas Conversas</h6><div class="ai"><div class="ad g"><i class="fa-solid fa-user"></i></div><div><div class="at"><strong>Joao</strong> perguntou <span>"Qual meu saldo?"</span></div><div class="at-time">Ha 2min — IA</div></div></div></div><div class="ai"><div class="ad t"><i class="fa-solid fa-user"></i></div><div><div class="at"><strong>Maria</strong> solicitou <span>agendamento</span></div><div class="at-time">Ha 5min — Agendado</div></div></div><div class="ai"><div class="ad y"><i class="fa-solid fa-user"></i></div><div><div class="at"><strong>Pedro</strong> reportou <span>problema</span></div><div class="at-time">Ha 12min — Escalado</div></div></div></div></div>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: VOICE IP ===== -->
+<div class="pg" id="pg-voice" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Voice IP</h5><p class="mb-0" style="color:var(--td)">4.298 chamadas este mes</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-plus me-1"></i>Nova Campanha</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="si r"><i class="fa-solid fa-phone-volume"></i></div><div class="sl2">Chamadas Mes</div><div class="sv">4.298</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-phone-flip"></i></div><div class="sl2">Taxa Atend</div><div class="sv">68%</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-clock"></i></div><div class="sl2">Duracao Media</div><div class="sv">24s</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-coins"></i></div><div class="sl2">Custo Medio</div><div class="sv">R$ 0,08</div><div style="font-size:.72rem;color:var(--td)">Por chamada</div></div></div>
+  </div>
+  <div class="cc mb-4"><div class="ch"><h6><i class="fa-solid fa-chart-area me-2" style="color:var(--ac)"></i>Chamadas Semanal</h6></div><canvas id="cVoiceB" height="100"></canvas></div>
+  <div class="cc"><div class="ch"><h6><i class="fa-solid fa-phone me-2" style="color:var(--ac)"></i>Campanhas de Voz</h6>
+    <button class="btn btn-sm" style="border:1px solid var(--brd);border-radius:10px;color:var(--td);background:var(--bg2)"><i class="fa-solid fa-filter"></i></button>
+  </div>
+    <table class="ft"><thead><tr><th>Campanha</th><th>Destinatarios</th><th>Completadas</th><th>Taxa</th><th>Duracao</th><th>Status</th></tr></thead><tbody>
+      <tr><td><strong>Lembrete Pagamento</strong></td><td>5.500</td><td>3.200</td><td>78%</td><td>28s</td><td><span class="st w"><span class="sd"></span>Em curso</span></td></tr>
+      <tr><td><strong>Promocao Especial</strong></td><td>3.000</td><td>1.950</td><td>65%</td><td>21s</td><td><span class="st a"><span class="sd"></span>Concluida</span></td></tr>
+      <tr><td><strong>Alerta Vencimento</strong></td><td>1.200</td><td>890</td><td>74%</td><td>32s</td><td><span class="st a"><span class="sd"></span>Concluida</span></td></tr>
+      <tr><td><strong>Pesquisa Satisfacao</strong></td><td>800</td><td>560</td><td>70%</td><td>18s</td><td><span class="st off"><span class="sd"></span>Programada</span></td></tr>
+    </tbody></table>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: MARKETING ===== -->
+<div class="pg" id="pg-marketing" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Marketing Digital</h5><p class="mb-0" style="color:var(--td)">7 campanhas activas</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-plus me-1"></i>Nova Campanha</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="d-flex justify-content-between"><div class="si r"><i class="fa-solid fa-bullhorn"></i></div><span class="s-ch up">54%</span></div></div><div class="sl2">Campanhas Activas</div><div class="sv">7</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-eye"></i></div><div class="sl2">Impressoes Mes</div><div class="sv">2.4M</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-mouse-pointer"></i></div><div class="sl2">CPC Medio</div><div class="sv">R$ 0,45</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-hand-pointer"></i></div><div class="sl2">CTR Medio</div><div class="sv">3.2%</div></div></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-lg-7"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-chart-bar me-2" style="color:var(--ac)"></i>Investimento Mensal</h6></div><canvas id="cMktB" height="130"></canvas></div></div>
+    <div class="col-lg-5"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-chart-pie me-2" style="color:var(--tl)"></i>Canais</h6></div><canvas id="cMktD" height="180"></canvas><div class="mt-3" style="font-size:.8rem"><div class="d-flex justify-content-between mb-1"><span style="color:var(--td)"><i class="fa-solid fa-circle me-1" style="color:var(--rd);font-size:.5rem"></i>Google Ads</span><strong>48%</strong></div><div class="d-flex justify-content-between mb-1"><span style="color:var(--td)"><i class="fa-solid fa-circle me-1" style="color:var(--tl);font-size:.5rem"></i>Meta Ads</span><strong>32%</strong></div><div class="d-flex justify-content-between"><span style="color:var(--td)"><i class="fa-solid fa-circle me-1" style="color:var(--gr);font-size:.5rem"></i>SEO</span><strong>20%</strong></div></div></div></div>
+  </div>
+  <div class="cc"><div class="ch"><h6><i class="fa-solid fa-list me-2" style="color:var(--ac)"></i>Campanhas Activas</h6></div>
+    <table class="ft"><thead><tr><th>Campanha</th><th>Canal</th><th>Orcamento</th><th>Gasto</th><th>CTR</th><th>Conversoes</th><th>Status</th></tr></thead><tbody>
+      <tr><td><strong>Black Friday</strong></td><td><span style="font-size:.7rem;background:var(--al);color:var(--ac);padding:.15rem .5rem;border-radius:20px;font-weight:600">Google</span></td><td>R$ 1.200</td><td>R$ 890</td><td>4.1%</td><td>67</td><td><span class="st a"><span class="sd"></span>Activa</span></td></tr>
+      <tr><td><strong>Instagram Reels</strong></td><td><span style="font-size:.7rem;background:var(--tl2);color:var(--tl);padding:.15rem .5rem;border-radius:20px;font-weight:600">Meta</span></td><td>R$ 800</td><td>R$ 560</td><td>2.8%</td><td>34</td><td><span class="st a"><span class="sd"></span>Activa</span></td></tr>
+      <tr><td><strong>SEO Blog</strong></td><td><span style="font-size:.7rem;background:var(--g2);color:var(--gr);padding:.15rem .5rem;border-radius:20px;font-weight:600">SEO</span></td><td>R$ 600</td><td>R$ 340</td><td>—</td><td>128</td><td><span class="st a"><span class="sd"></span>Activa</span></td></tr>
+    </tbody></table>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: WEBSITES IA ===== -->
+<div class="pg" id="pg-websites" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Websites com IA</h5><p class="mb-0" style="color:var(--td)">8 websites criados</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-wand-magic-sparkles me-1"></i>Criar Novo Site</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="si r"><i class="fa-solid fa-wand-magic-sparkles"></i></div><div class="sl2">Criados</div><div class="sv">8</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-spinner"></i></div><div class="sl2">Em Geracao</div><div class="sv">2</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-globe"></i></div><div class="sl2">Online</div><div class="sv">6</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-bolt"></i></div><div class="sl2">Tempo Medio</div><div class="sv">18m</div></div></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-6"><div class="cc" style="border-left:4px solid var(--ac)"><div class="d-flex justify-content-between mb-3"><div><h6 class="mb-0">fashionluanda.com</h6><span class="st a" style="font-size:.7rem"><span class="sd"></span>Online</span></div><span style="font-size:.72rem;color:var(--td)">Ha 2 dias</span></div><div class="row g-2"><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">Trafego</div><div style="font-weight:700">2.3K/mes</div></div></div><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">SEO Score</div><div style="font-weight:700;color:var(--gr)">87/100</div></div></div><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">Velocidade</div><div style="font-weight:700;color:var(--gr)">92/100</div></div></div><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">Paginas</div><div style="font-weight:700">12</div></div></div></div></div></div>
+    <div class="col-md-6"><div class="cc" style="border-left:4px solid var(--ye)"><div class="d-flex justify-content-between mb-3"><div><h6 class="mb-0">meubanco.ao</h6><span class="st w" style="font-size:.7rem"><span class="sd"></span>Gerando</span></div><span style="font-size:.72rem;color:var(--td)">15 min restantes</span></div><div class="mb-2" style="font-size:.78rem;color:var(--td)">Gerando layout com IA...</div><div class="bar mb-3"><div class="bf y" style="width:72%"></div></div><div class="row g-2"><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">Modelo</div><div style="font-weight:700">E-commerce</div></div></div><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">Tema</div><div style="font-weight:700">Corporativo</div></div></div></div></div></div>
+  </div>
+  <div class="cc"><div class="ch"><h6><i class="fa-solid fa-list me-2" style="color:var(--ac)"></i>Todos os Websites</h6></div>
+    <table class="ft"><thead><tr><th>Website</th><th>Modelo</th><th>Status</th><th>Trafego</th><th>SEO</th><th>Criado</th></tr></thead><tbody>
+      <tr><td><strong>fashionluanda.com</strong></td><td>E-commerce</td><td><span class="st a"><span class="sd"></span>Online</span></td><td>2.3K/mes</td><td><span style="color:var(--gr)">87/100</span></td><td>Ha 2 dias</td></tr>
+      <tr><td><strong>iunia.com</strong></td><td>SaaS</td><td><span class="st a"><span class="sd"></span>Online</span></td><td>5.1K/mes</td><td><span style="color:var(--gr)">94/100</span></td><td>Ha 30 dias</td></tr>
+      <tr><td><strong>meubanco.ao</strong></td><td>Corporativo</span></td><td><span class="st w"><span class="sd"></span>Gerando</span></td><td>—</td><td>—</td><td>Agora</td></tr>
+      <tr><td><strong>techluanda.com</strong></td><td>Portfolio</span></td><td><span class="st a"><span class="sd"></span>Online</span></td><td>890/mes</td><td><span style="color:var(--gr)">78/100</span></td><td>Ha 15 dias</td></tr>
+    </tbody></table>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: DESENVOLVIMENTO ===== -->
+<div class="pg" id="pg-dev" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Desenvolvimento</h5><p class="mb-0" style="color:var(--td)">4 projectos em andamento</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-plus me-1"></i>Novo Projecto</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-diagram-project"></i></div><div class="sl2">Projectos Activos</div><div class="sv">4</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-circle-check"></i></div><div class="sl2">Concluidos</div><div class="sv">12</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-code-pull-request"></i></div><div class="sl2">Deploys Mes</div><div class="sv">23</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="si r"><i class="fa-solid fa-bug"></i></div><div class="sl2">Bugs Abertos</div><div class="sv">3</div></div></div>
+  </div>
+  <div class="cc mb-4"><div class="ch"><h6><i class="fa-solid fa-chart-bar me-2" style="color:var(--ac)"></i>Produtividade Semanal</h6></div><canvas id="cDevB" height="100"></canvas></div>
+  <div class="row g-3">
+    <div class="col-lg-8"><div class="cc"><div class="ch"><h6><i class="fa-solid fa-list me-2" style="color:var(--ac)"></i>Projectos</h6></div>
+      <div class="p-3 mb-3" style="border:1px solid var(--brd);border-radius:12px"><div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><div><h6 class="mb-1">API Gateway v3</h6><div style="font-size:.78rem;color:var(--td)">Sprint 8 — 92% concluido</div></div><span class="st a"><span class="sd"></span>Finalizando</span></div><div class="bar mt-3"><div class="bf g" style="width:92%"></div></div><div class="d-flex gap-2 mt-2"><span class="dp">Node.js</span><span class="dp">PostgreSQL</span><span class="dp">Redis</span></div></div>
+      <div class="p-3 mb-3" style="border:1px solid var(--brd);border-radius:12px"><div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><div><h6 class="mb-1">App Mobile Cliente</h6><div style="font-size:.78rem;color:var(--td)">Sprint 4 — 45% concluido</div></div><span class="st w"><span class="sd"></span>Em andamento</span></div><div class="bar mt-3"><div class="bf t" style="width:45%"></div></div><div class="d-flex gap-2 mt-2"><span class="dp">Flutter</span><span class="dp">Firebase</span><span class="dp">TypeScript</span></div></div>
+      <div class="p-3" style="border:1px solid var(--brd);border-radius:12px"><div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><div><h6 class="mb-1">Integracao IA Chatbot</h6><div style="font-size:.78rem;color:var(--td)">Planeamento — 15% concluido</div></div><span class="st i"><span class="sd"></span>Planeamento</span></div><div class="bar mt-3"><div class="bf y" style="width:15%"></div></div><div class="d-flex gap-2 mt-2"><span class="dp">Python</span><span class="dp">OpenAI</span><span class="dp">WhatsApp API</span></div></div>
+    </div></div>
+    <div class="col-lg-4"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-clock me-2" style="color:var(--ac)"></i>Actividade Recente</h6></div>
+      <div class="ai"><div class="ad g"><i class="fa-solid fa-check"></i></div><div><div class="at"><strong>Deploy v2.4.1</span> — API SMS melhorada</div><div class="at-time">Ha 2h</div></div></div>
+      <div class="ai"><div class="ad r"><i class="fa-solid fa-code-commit"></i></div><div><div class="at"><strong>12 commits</span> na API Gateway</div><div class="at-time">Ha 5h</div></div></div>
+      <div class="ai"><div class="ad t"><i class="fa-solid fa-bug-slash"></i></div><div><div class="at"><strong>Bug#142 corrigido</span> — Timeout SMS</div><div class="at-time">Ontem</div></div></div>
+      <div class="ai"><div class="ad y"><i class="fa-solid fa-user-plus"></i></div><div><div class="at"><strong>Novo dev</span> entrou na equipa</div><div class="at-time">2 dias atras</div></div></div>
+    </div></div>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: RELATORIOS ===== -->
+<div class="pg" id="pg-relatorios" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Relatorios & Analytics</h5><p class="mb-0" style="color:var(--td)">Visao completa dos servicos</p></div>
+    <button class="btn btn-sm" style="border:1px solid var(--brd);border-radius:10px;color:var(--td);background:var(--bg2)"><i class="fa-solid fa-download me-1"></i>Baixar PDF</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-4"><div class="cc"><div class="d-flex justify-content-between mb-2"><span style="font-size:.78rem;color:var(--td)">Receita Mes</span><i class="fa-solid fa-trend-up" style="color:var(--gr)"></i></div><div class="sv">R$ 14.820</div><div class="row g-2 mt-2"><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">Hospedagem</div><div style="font-weight:700">R$ 6.200</div></div></div><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">SMS</div><div style="font-weight:700">R$ 3.800</div></div></div><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">WhatsApp</div><div style="font-weight:700">R$ 2.400</div></div></div><div class="col-6"><div class="ib2"><div style="font-size:.72rem;color:var(--td)">Marketing</div><div style="font-weight:700">R$ 2.420</div></div></div></div></div></div>
+    <div class="col-sm-6 col-lg-8"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-chart-bar me-2" style="color:var(--ac)"></i>Receita Mensal</h6></div><canvas id="cRelB" height="200"></canvas></div></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-4"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-chart-pie me-2" style="color:var(--tl)"></i>Distribuicao</h6></div><canvas id="cRelD" height="200"></canvas><div class="mt-3" style="font-size:.8rem"><div class="d-flex justify-content-between mb-1"><span style="color:var(--td)"><i class="fa-solid fa-circle me-1" style="color:var(--rd);font-size:.5rem"></i>Hospedagem</span><strong>42%</strong></div><div class="d-flex justify-content-between mb-1"><span style="color:var(--td)"><i class="fa-solid fa-circle me-1" style="color:var(--tl);font-size:.5rem"></i>SMS</span><strong>26%</strong></div><div class="d-flex justify-content-between mb-1"><span style="color:var(--td)"><i class="fa-solid fa-circle me-1" style="color:var(--gr);font-size:.5rem"></i>WhatsApp</span><strong>16%</strong></div><div class="d-flex justify-content-between"><span style="color:var(--td)"><i class="fa-solid fa-circle me-1" style="color:var(--ye);font-size:.5rem"></i>Outros</span><strong>16%</strong></div></div></div></div>
+    <div class="col-sm-6 col-lg-4"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-chart-line me-2" style="color:var(--ac)"></i>KPIs</h6></div><div class="ib2 mb-3"><div style="font-size:.72rem;color:var(--td)">Novos Clientes</div><div class="sv" style="font-size:1.5rem">+47</div><div style="color:var(--gr);font-size:.78rem"><i class="fa-solid fa-arrow-up"></i> 12%</div></div><div class="ib2 mb-3"><div style="font-size:.72rem;color:var(--td)">Churn Rate</div><div class="sv" style="font-size:1.5rem">2.1%</div><div style="color:var(--gr);font-size:.78rem"><i class="fa-solid fa-arrow-down"></i> -0.5%</div></div><div class="ib2"><div style="font-size:.72rem;color:var(--td)">NPS</div><div class="sv" style="font-size:1.5rem">82</div><div style="color:var(--gr);font-size:.78rem">Promotor</div></div></div></div>
+    <div class="col-sm-6 col-lg-4"><div class="cc h-100"><div class="ch"><h6><i class="fa-solid fa-trophy me-2" style="color:var(--ye)"></i>Top Dominios</h6></div><div class="ai"><div class="ad r"><i class="fa-solid fa-fire"></i></div><div><div class="at"><strong>iunia.com</span></div><div class="at-time">12.5K visitas/mes</div></div></div><div class="ai"><div class="ad t"><i class="fa-solid fa-chart-line"></i></div><div><div class="at"><strong>fashionluanda.com</span></div><div class="at-time">2.3K visitas/mes</div></div></div><div class="ai"><div class="ad g"><i class="fa-solid fa-arrow-trend-up"></i></div><div><div class="at"><strong>meubanco.ao</span></div><div class="at-time">1.8K visitas/mes</div></div></div></div></div>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: FATURAMENTO ===== -->
+<div class="pg" id="pg-faturamento" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Faturamento</h5><p class="mb-0" style="color:var(--td)">Faturas e pagamentos</p></div>
+    <button class="btn btn-sm" style="border:1px solid var(--brd);border-radius:10px;color:var(--td);background:var(--bg2)"><i class="fa-solid fa-file-invoice me-1"></i>Todas Faturas</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-coins"></i></div><div class="sl2">Saldo Credito</div><div class="sv">R$ 2.450</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-hourglass-half"></i></div><div class="sl2">Proxima Fatura</div><div class="sv" style="font-size:1.3rem">R$ 1.139</div><div style="font-size:.72rem;color:var(--td)">Vence em 7 dias</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-credit-card"></i></div><div class="sl2">Cartao Activo</div><div class="sv" style="font-size:1.2rem">&#9679;&#9679;&#9679;&#9679; 4242</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="si r"><i class="fa-solid fa-receipt"></i></div><div class="sl2">Faturas Pendentes</div><div class="sv">1</div></div></div>
+  </div>
+  <div class="cc"><div class="ch"><h6><i class="fa-solid fa-list me-2" style="color:var(--ac)"></i>Faturas Recentes</h6></div>
+    <table class="ft"><thead><tr><th>ID</th><th>Descricao</th><th>Data</th><th>Valor</th><th>Metodo</th><th>Status</th></tr></thead><tbody>
+      <tr><td><strong>FAT-2025-042</td><td>Hospedagem VPS + Cloud</td><td>01/04/2026</td><td><strong>R$ 339,80</td><td>Cartao</td><td><span class="st w"><span class="sd"></span>Pendente</td></tr>
+      <tr><td><strong>FAT-2025-041</td><td>SMS Campanha Marco</td><td>28/03/2026</td><td>R$ 156,00</td><td>Saldo</td><td><span class="st a"><span class="sd"></span>Paga</td></tr>
+      <tr><td><strong>FAT-2025-040</td><td>WhatsApp Business</td><td>25/03/2026</td><td>R$ 89,90</td><td>Cartao</td><td><span class="st a"><span class="sd"></span>Paga</td></tr>
+      <tr><td><strong>FAT-2025-039</td><td>Marketing Google Ads</td><td>20/03/2026</td><td>R$ 560,00</td><td>Transferencia</td><td><span class="st a"><span class="sd"></span>Paga</td></tr>
+    </tbody></table>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: EQUIPA ===== -->
+<div class="pg" id="pg-equipa" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Gestao de Equipa</h5><p class="mb-0" style="color:var(--td)">6 membros na equipa</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-user-plus me-1"></i>Adicionar Membro</button>
+  </div>
+  <div class="cc mb-4"><div class="ch"><h6><i class="fa-solid fa-chart-bar me-2" style="color:var(--ac)"></i>Performance da Equipa</h6></div>
+    <canvas id="cEq" height="100"></canvas>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-4"><div class="cc"><div class="d-flex align-items-center gap-3 mb-3"><div style="width:48px;height:48px;border-radius:50%;background:var(--ac);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem">AB</div><div><h6 class="mb-0">Alberto Calton</h6><span style="font-size:.75rem;color:var(--td)">Admin / Fundador</span></div></div><div class="d-flex gap-2"><span class="st a"><span class="sd"></span>Online</span></div><div class="mt-2" style="font-size:.8rem;color:var(--td)">Acesso total a todos os modulos. Gerencia e aprova todas as operacoes.</div></div></div>
+    <div class="col-md-4"><div class="cc"><div class="d-flex align-items-center gap-3 mb-3"><div style="width:48px;height:48px;border-radius:50%;background:var(--tl);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem">JC</div><div><h6 class="mb-0">Joana Costa</h6><span style="font-size:.75rem;color:var(--td)">Developer Lead</span></div></div><div class="d-flex gap-2"><span class="st a"><span class="sd"></span>Online</span></div><div class="mt-2" style="font-size:.8rem;color:var(--td)">Responsavel pelo desenvolvimento de software e integracao de IA nos chatbots.</div></div></div>
+    <div class="col-md-4"><div class="cc"><div class="d-flex align-items-center gap-3 mb-3"><div style="width:48px;height:48px;border-radius:50%;background:var(--gr);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem">PL</div><div><h6 class="mb-0">Pedro Lopes</h6><span style="font-size:.75rem;color:var(--td)">Marketing Manager</span></div></div><div class="d-flex gap-2"><span class="st a"><span class="sd"></span>Online</span></div><div class="mt-2" style="font-size:.8rem;color:var(--td)">Gerencia campanhas de marketing digital, Google Ads e Meta Ads.</div></div></div>
+    <div class="col-md-4"><div class="cc"><div class="d-flex align-items-center gap-3 mb-3"><div style="width:48px;height:48px;border-radius:50%;background:var(--ye);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem">MS</div><div><h6 class="mb-0">Maria Santos</h6><span style="font-size:.75rem;color:var(--td)">SysAdmin</span></div></div><div class="d-flex gap-2"><span class="st off"><span class="sd"></span>Offline</span></div><div class="mt-2" style="font-size:.8rem;color:var(--td)">Administracao de servidores, hospedagem e infra-estrutura de rede.</div></div></div>
+    <div class="col-md-4"><div class="cc"><div class="d-flex align-items-center gap-3 mb-3"><div style="width:48px;height:48px;border-radius:50%;background:var(--pk);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem">AF</div><div><h6 class="mb-0">Ana Fernandes</h6><span style="font-size:.75rem;color:var(--td)">Suporte</span></div></div><div class="d-flex gap-2"><span class="st a"><span class="sd"></span>Online</span></div><div class="mt-2" style="font-size:.8rem;color:var(--td)">Atendimento ao cliente, gestao de tickets e relacoes publicas.</div></div></div>
+    <div class="col-md-4"><div class="cc"><div class="d-flex align-items-center gap-3 mb-3"><div style="width:48px;height:48px;border-radius:50%;background:var(--tm);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem">RM</div><div><h6 class="mb-0">Ricardo Mendes</h6><span style="font-size:.75rem;color:var(--td)">Designer</span></div></div><div class="d-flex gap-2"><span class="st w"><span class="sd"></span>Ausente</span></div><div class="mt-2" style="font-size:.8rem;color:var(--td)">Criacao de websites com IA, design de interfaces e experiencia de usuario.</div></div></div>
+  </div>
+</div></div>
+
+<!-- ===== PAGE: SUPORTE ===== -->
+<div class="pg" id="pg-suporte" style="display:none">
+<div class="fade-in">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div><h5 class="fw-bold mb-1" style="font-size:1.2rem">Central de Suporte</h5><p class="mb-0" style="color:var(--td)">4 tickets abertos</p></div>
+    <button class="btn btn-sm" style="background:var(--ac);color:#fff;border-radius:10px"><i class="fa-solid fa-plus me-1"></i>Novo Ticket</button>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="sc r"><div class="si r"><i class="fa-solid fa-ticket"></i></div><div class="sl2">Tickets Abertos</div><div class="sv">4</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc y"><div class="si y"><i class="fa-solid fa-clock"></i></div><div class="sl2">Tempo Medio</div><div class="sv">2.3h</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc g"><div class="si g"><i class="fa-solid fa-check"></i></div><div class="sl2">Resolvidos Mes</div><div class="sv">38</div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="sc t"><div class="si t"><i class="fa-solid fa-face-smile"></i></div><div class="sl2">Satisfacao</div><div class="sv">4.6</div></div></div>
+  </div>
+  <div class="cc"><div class="ch"><h6><i class="fa-solid fa-list me-2" style="color:var(--ac)"></i>Tickets Recentes</h6></div>
+    <table class="ft"><thead><tr><th>#ID</th><th>Assunto</th><th>Cliente</th><th>Prioridade</th><th>Agente</th><th>Status</th></tr></thead><tbody>
+      <tr><td><strong>#T-089</td><td>Erro ao enviar SMS em massa</td><td>Carlos Neto</span></td><td><span class="st dg"><span class="sd"></span>Alta</td></td><td>Ana F.</td><td><span class="st a"><span class="sd"></span>Aberto</td></tr>
+      <tr><td><strong>#T-088</td><td>Renovacao de dominio pendente</td><td>Luisa Pinto</span></td><td><span class="st w"><span class="sd"></span>Media</td></td><td>Joana C.</td><td><span class="st a"><span class="sd"></span>Em progresso</td></tr>
+      <tr><td><strong>#T-087</td><td>Chatbot nao responde</td><td>TechAngola</span></td><td><span class="st dg"><span class="sd"></span>Alta</td></td><td>Alberto C.</td><td><span class="st a"><span class="sd"></span>Em progresso</td></tr>
+      <tr><td><strong>#T-085</td><td>Duvida sobre plano VPS</td><td>Moda Luanda</span></td><td><span class="st off"><span class="sd"></span>Baixa</td></td><td>Ana F.</td><td><span class="st off"><span class="sd"></span>Aguardando</td></tr>
+      <tr><td><strong>#T-082</td><td>Migrar site para novo servidor</td><td>Banco Fianca</span></td><td><span class="st w"><span class="sd"></span>Media</td></td><td>Maria S.</td><td><span class="st a"><span class="sd"></span>Resolvido</td></tr>
+      <tr><td><strong>#T-080</td><td>Configurar DNS customizado</td><td>Fashion Lda</span></td><td><span class="st off"><span class="sd"></span>Baixa</td></td><td>Alberto C.</td><td><span class="st a"><span class="sd"></span>Resolvido</td></tr>
+    </tbody></table>
+  </div>
+</div></div>
+
+<script>
+function cEqChart(){new Chart(document.getElementById('cEq'),{type:'bar',data:{labels:['Alberto','Joana','Pedro','Maria','Ana','Ricardo'],datasets:[{label:'Tarefas',data:[23,18,15,12,20,10],backgroundColor:['rgba(220,38,38,.5)','rgba(8,145,178,.5)','rgba(22,163,74,.5)','rgba(217,119,6,.5)','rgba(236,72,153,.5)','rgba(148,163,184,.5)'],borderRadius:8,barThickness:30}]},options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:gc()}}}}})}
+function cSupChart(){new Chart(document.getElementById('cSup'),{type:'doughnut',data:{labels:['Abertos','Em curso','Resolvidos','Fechados'],datasets:[{data:[4,8,22,38],backgroundColor:['#dc2626','#d97706','#16a34a','#64748b'],borderWidth:0,cutout:'72%'}]},options:{responsive:true,plugins:{legend:{display:false}}}}})}
+</script>
+
+<!-- ====== SCRIPT: THEME + NAV + INIT ====== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* Theme Toggle */
+var themeTog=document.getElementById('themeTog'),themeI=document.getElementById('themeI');
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);themeI.className=t==='dark'?'fa-solid fa-sun':'fa-solid fa-moon';localStorage.setItem('iut',t)}
+var saved=localStorage.getItem('iut')||'light';setTheme(saved);
+themeTog.onclick=function(){var c=document.documentElement.getAttribute('data-theme');setTheme(c==='light'?'dark':'light')};
+
+/* Sidebar Nav */
+var curPage='visao';
+function go(page){
+  document.querySelectorAll('.pg').forEach(function(p){p.style.display='none';p.classList.remove('active')});
+  var el=document.getElementById('pg-'+page);
+  if(el){el.style.display='block';setTimeout(function(){el.classList.add('active')},10)}
+  document.querySelectorAll('.s-link').forEach(function(l){l.classList.remove('active')});
+  var sl=document.querySelector('.s-link[data-p="'+page+'"]');
+  if(sl)sl.classList.add('active');
+  curPage=page;
+  initChartsFor(page);
+}
+
+/* Attach clicks */
+document.querySelectorAll('.s-link').forEach(function(link){
+  link.onclick=function(e){e.preventDefault();go(this.getAttribute('data-p'));
+    if(window.innerWidth<992)document.getElementById('sb').classList.remove('show');
+  };
+});
+
+/* Mobile nav */
+document.getElementById('sTog').onclick=function(){document.getElementById('sb').classList.toggle('show')};
+
+/* Avatar dropdown */
+document.getElementById('avBtn').onclick=function(){var m=document.getElementById('ddMenu');m.style.display=m.style.display==='none'?'block':'none'};
+document.addEventListener('click',function(e){if(!e.target.closest('.avatar')&&!e.target.closest('.dd-menu')){document.getElementById('ddMenu').style.display='none'}});
+
+/* Init charts helper */
+function initChartsFor(pg){
+  setTimeout(function(){
+    var els=document.querySelectorAll('canvas');
+    if(pg==='visao'){if(document.getElementById('cMain'))c1();if(document.getElementById('cDoughnut'))c2()}
+    if(pg==='sms'){if(document.getElementById('cSmsB'))cSmsB()}
+    if(pg==='whatsapp'){if(document.getElementById('cWpB'))cWp()}
+    if(pg==='voice'){if(document.getElementById('cVoiceB'))cVoiceB()}
+    if(pg==='marketing'){if(document.getElementById('cMktB'))cMktB();if(document.getElementById('cMktD'))cMktD()}
+    if(pg==='dev'){if(document.getElementById('cDevB'))cDevB()}
+    if(pg==='relatorios'){if(document.getElementById('cRelB'))cRelB();if(document.getElementById('cRelD'))cRelD()}
+    if(pg==='equipa'){if(document.getElementById('cEq'))cEqChart()}
+    if(pg==='suporte'){if(document.getElementById('cSup'))cSupChart()}
+  },150);
+}
+
+/* Start */
+go('visao');
+</script>
+</body>
+</html>

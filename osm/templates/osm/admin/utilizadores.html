@@ -1,0 +1,58 @@
+{% extends "osm/base.html" %}
+{% block title %}Utilizadores — OSM{% endblock %}
+{% block nav_utilizadores %}active{% endblock %}
+{% block topbar_title %}Utilizadores{% endblock %}
+{% block topbar_sub %}{{ users|length }} utilizador(es){% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'utilizador_novo' %}" class="btn btn-primary btn-sm">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  Novo Utilizador
+</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Utilizador</th><th>Email</th><th>Telefone</th><th>Perfil</th><th>Estado</th><th>Registo</th><th>Acções</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:10px;background:var(--accent-l);color:var(--accent);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ u.iniciais }}</div>
+              <div>
+                <div class="td-primary">{{ u.nome_completo }}</div>
+                <div class="td-sub">{{ u.cargo|default:"—" }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:12px">{{ u.email|default:"—" }}</td>
+          <td style="font-size:12px;font-family:var(--ff-mono)">{{ u.telefone|default:"—" }}</td>
+          <td><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;background:var(--accent-l);color:var(--accent)">{{ u.label_perfil }}</span></td>
+          <td><span class="badge {% if u.activo %}badge-ativo{% else %}badge-atraso{% endif %}">{% if u.activo %}Activo{% else %}Inactivo{% endif %}</span></td>
+          <td style="font-size:11px;color:var(--text3)">{{ u.data_registo|date:"d/m/Y" }}</td>
+          <td>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <a href="{% url 'utilizador_ficha_pdf' u.pk %}" class="btn btn-secondary btn-sm">📄 Ficha</a>
+              <a href="{% url 'utilizador_editar' u.pk %}" class="btn btn-secondary btn-sm">✏</a>
+              {% if u != request.user %}
+              <form method="post" action="{% url 'utilizador_toggle' u.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm" style="color:{% if u.activo %}var(--danger){% else %}var(--success){% endif %}">{% if u.activo %}⏸{% else %}▶{% endif %}</button>
+              </form>
+              <form method="post" action="{% url 'utilizador_eliminar' u.pk %}" style="display:inline" onsubmit="return confirm('Eliminar {{ u.nome_completo }}?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text3)">Nenhum utilizador.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

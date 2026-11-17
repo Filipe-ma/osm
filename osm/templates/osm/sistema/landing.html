@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>OSM Microcrédito — Financiamento que Cresce Consigo</title>
+<!-- Font Awesome 6 (gratuito) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0a1628;
+  --ink2:   #1e3a5f;
+  --gold:   #c9a84c;
+  --gold2:  #e8c96c;
+  --cream:  #f8f4ed;
+  --cream2: #f0ebe0;
+  --blue:   #1565c0;
+  --blue2:  #1976d2;
+  --teal:   #00695c;
+  --white:  #ffffff;
+  --gray:   #64748b;
+  --light:  #f1f5f9;
+  --shadow: 0 20px 60px rgba(10,22,40,.12);
+  --shadow-sm: 0 4px 20px rgba(10,22,40,.08);
+  --ff-display: 'Playfair Display', Georgia, serif;
+  --ff-body:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --ff-mono:    'Space Mono', monospace;
+  --r: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--ff-body); background: var(--white); color: var(--ink); overflow-x: hidden; }
+
+/* ── HEADER (igual ao original) ── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 0 5vw;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 72px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(201,168,76,.15);
+  transition: box-shadow .3s;
+}
+.header.scrolled { box-shadow: 0 4px 30px rgba(10,22,40,.08); }
+.logo-wrap { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.logo-text { font-family: var(--ff-display); font-weight: 700; font-size: 18px; color: var(--ink); }
+.logo-text span { color: var(--gold); }
+.nav { display: flex; align-items: center; gap: 8px; }
+.nav a {
+  font-size: 14px; font-weight: 500; color: var(--ink2);
+  padding: 8px 16px; border-radius: 8px; text-decoration: none;
+  transition: background .2s, color .2s;
+}
+.nav a:hover { background: var(--light); color: var(--ink); }
+.btn-login {
+  font-size: 14px; font-weight: 600; color: var(--white) !important;
+  background: var(--ink) !important; padding: 10px 22px !important;
+  border-radius: 10px !important; transition: background .2s, transform .15s !important;
+}
+.btn-login:hover { background: var(--ink2) !important; transform: translateY(-1px); }
+.nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+
+/* ── HERO (igual) ── */
+.hero {
+  min-height: 100vh;
+  display: grid; grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 100px 5vw 60px;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(21,101,192,.06) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 10% 80%, rgba(201,168,76,.08) 0%, transparent 60%),
+    var(--cream);
+  gap: 60px;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.3);
+  border-radius: 20px; padding: 6px 14px;
+  font-size: 12px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--gold);
+  margin-bottom: 24px;
+}
+.hero-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+.hero h1 {
+  font-family: var(--ff-display); font-size: clamp(38px, 5vw, 60px);
+  line-height: 1.08; color: var(--ink); margin-bottom: 24px;
+}
+.hero h1 em { font-style: italic; color: var(--blue); }
+.hero p {
+  font-size: 18px; line-height: 1.7; color: var(--gray);
+  max-width: 460px; margin-bottom: 40px;
+}
+.hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--ink); color: var(--white);
+  padding: 14px 28px; border-radius: 12px;
+  font-size: 15px; font-weight: 600; text-decoration: none;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  box-shadow: 0 4px 20px rgba(10,22,40,.2);
+}
+.btn-primary:hover { background: var(--blue); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(21,101,192,.3); }
+.btn-primary .arr { transition: transform .2s; }
+.btn-primary:hover .arr { transform: translateX(4px); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: var(--ink);
+  padding: 14px 28px; border-radius: 12px; border: 1.5px solid var(--ink2);
+  font-size: 15px; font-weight: 600; text-decoration: none;
+  transition: border-color .2s, color .2s, transform .15s;
+}
+.btn-secondary:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-2px); }
+
+.hero-stats {
+  display: flex; gap: 32px; margin-top: 48px; flex-wrap: wrap;
+}
+.stat { }
+.stat-num {
+  font-family: var(--ff-mono); font-size: 28px; font-weight: 700;
+  color: var(--ink); line-height: 1;
+}
+.stat-label { font-size: 13px; color: var(--gray); margin-top: 4px; }
+.stat-sep { width: 1px; background: rgba(10,22,40,.1); align-self: stretch; }
+
+.hero-visual { position: relative; }
+.banking-card {
+  background: linear-gradient(135deg, var(--ink) 0%, var(--ink2) 60%, var(--blue) 100%);
+  border-radius: 20px; padding: 32px;
+  box-shadow: var(--shadow); color: var(--white);
+  position: relative; overflow: hidden;
+  animation: float 6s ease-in-out infinite;
+  width: 350px; margin-left: 12px;
+}
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.banking-card::before {
+  content: '';
+  position: absolute; top: -40%; right: -20%; width: 70%; aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,168,76,.2) 0%, transparent 70%);
+}
+.card-chip {
+  width: 44px; height: 32px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+  margin-bottom: 28px;
+}
+.card-number {
+  font-family: var(--ff-mono); font-size: 18px; letter-spacing: 3px;
+  color: rgba(255,255,255,.8); margin-bottom: 24px;
+}
+.card-footer { display: flex; justify-content: space-between; align-items: flex-end; }
+.card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+.card-value { font-size: 15px; font-weight: 600; color: var(--white); }
+.card-badge {
+  background: rgba(201,168,76,.2); border: 1px solid rgba(201,168,76,.4);
+  border-radius: 20px; padding: 6px 14px;
+  font-size: 12px; font-weight: 600; color: var(--gold2);
+}
+.float-widget {
+  position: absolute; background: var(--white); border-radius: 14px;
+  box-shadow: var(--shadow-sm); padding: 14px 18px;
+  display: flex; align-items: center; gap: 10px;
+  animation: float 5s ease-in-out infinite;
+}
+.fw-1 { top: -12px; right: -8px; animation-delay: -2s; }
+.fw-2 { bottom: -12px; left: -8px; animation-delay: -1s; }
+.fw-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  background: rgba(0,0,0,0.02);
+}
+.fw-label { font-size: 11px; color: var(--gray); }
+.fw-value { font-size: 14px; font-weight: 700; color: var(--ink); }
+
+/* ── DIVIDER ── */
+.wave {
+  width: 100%; overflow: hidden; line-height: 0;
+  background: var(--cream);
+}
+
+/* ── SECTION: COMO FUNCIONA (igual) ── */
+.section { padding: 100px 5vw; }
+.section-label {
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
+}
+.section-title {
+  font-family: var(--ff-display); font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.15; color: var(--ink); margin-bottom: 16px;
+}
+.section-sub { font-size: 17px; color: var(--gray); line-height: 1.7; max-width: 540px; }
+.steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-top: 56px; }
+.step {
+  background: var(--white); border: 1px solid rgba(10,22,40,.07);
+  border-radius: var(--r); padding: 32px 28px;
+  transition: transform .25s, box-shadow .25s, border-color .25s;
+  position: relative; overflow: hidden;
+}
+.step::after {
+  content: attr(data-n);
+  position: absolute; right: 20px; top: 16px;
+  font-family: var(--ff-display); font-size: 80px; font-weight: 900;
+  color: rgba(10,22,40,.04); line-height: 1;
+}
+.step:hover { transform: translateY(-6px); box-shadow: var(--shadow); border-color: rgba(201,168,76,.3); }
+.step-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--ink2) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 20px;
+  color: var(--gold2);
+}
+.step h3 { font-family: var(--ff-display); font-size: 20px; color: var(--ink); margin-bottom: 10px; }
+.step p { font-size: 14px; color: var(--gray); line-height: 1.65; }
+
+/* ── PRODUTOS (igual) ── */
+.products-bg { background: var(--ink); color: var(--white); }
+.products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 52px; }
+.product-card {
+  border: 1px solid rgba(255,255,255,.1); border-radius: var(--r);
+  padding: 32px 28px; transition: border-color .25s, background .25s, transform .25s;
+  position: relative; overflow: hidden;
+}
+.product-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(201,168,76,.04));
+  opacity: 0; transition: opacity .3s;
+}
+.product-card:hover { border-color: rgba(201,168,76,.4); background: rgba(255,255,255,.03); transform: translateY(-4px); }
+.product-card:hover::before { opacity: 1; }
+.pc-badge {
+  display: inline-block; background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.3);
+  color: var(--gold2); font-size: 11px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase; padding: 4px 12px; border-radius: 20px; margin-bottom: 20px;
+}
+.product-card h3 { font-family: var(--ff-display); font-size: 22px; color: var(--white); margin-bottom: 10px; }
+.product-card p { font-size: 14px; color: rgba(255,255,255,.6); line-height: 1.65; margin-bottom: 20px; }
+.pc-rate { font-family: var(--ff-mono); font-size: 32px; font-weight: 700; color: var(--gold2); }
+.pc-rate span { font-size: 14px; color: rgba(255,255,255,.4); font-family: var(--ff-body); }
+
+/* ── SIMULADOR (MELHORADO) ── */
+.simulator {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+}
+.sim-card {
+  background: var(--white); border: 1px solid rgba(10,22,40,.08);
+  border-radius: 28px; padding: 36px; box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+.sim-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow);
+}
+.sim-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--gray); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.sim-label i {
+  font-size: 12px;
+  color: var(--gold);
+}
+.sim-value {
+  font-family: var(--ff-mono); font-size: 36px; font-weight: 700;
+  color: var(--ink); margin-bottom: 6px;
+}
+.sim-range {
+  width: 100%; -webkit-appearance: none; appearance: none;
+  height: 6px; border-radius: 3px; background: var(--light); outline: none; margin-bottom: 20px;
+  cursor: pointer;
+}
+.sim-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--ink); cursor: pointer; box-shadow: 0 2px 8px rgba(10,22,40,.2);
+  transition: transform .15s;
+}
+.sim-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+/* Novo input numérico */
+.sim-number {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
+}
+.sim-number input {
+  flex: 1; padding: 12px 16px; border: 1px solid rgba(10,22,40,.15);
+  border-radius: 12px; font-family: var(--ff-mono); font-size: 16px;
+  background: var(--white); transition: border 0.2s;
+}
+.sim-number input:focus {
+  outline: none; border-color: var(--gold);
+}
+.sim-number .unit {
+  font-size: 14px; font-weight: 600; color: var(--gray);
+}
+
+.sim-result {
+  background: linear-gradient(135deg, var(--ink), var(--ink2));
+  border-radius: 20px; padding: 24px; color: var(--white);
+  margin-top: 20px;
+}
+.sim-result-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.sr-item .sr-label {
+  font-size: 11px; color: rgba(255,255,255,.5); margin-bottom: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+.sr-item .sr-val {
+  font-family: var(--ff-mono); font-size: 22px; font-weight: 700; color: var(--gold2);
+}
+.sim-progress {
+  margin-top: 20px; background: rgba(255,255,255,.1); border-radius: 30px;
+  height: 8px; overflow: hidden;
+}
+.sim-progress-fill {
+  width: 0%; height: 100%; background: var(--gold2);
+  border-radius: 30px; transition: width 0.3s;
+}
+.sim-breakdown {
+  margin-top: 16px; display: flex; justify-content: space-between;
+  font-size: 12px; color: rgba(255,255,255,.7);
+}
+.sim-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; background: var(--ink); color: var(--white);
+  border: none; border-radius: 14px; padding: 14px;
+  font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 24px;
+  font-family: var(--ff-body); transition: background .2s, transform .1s;
+}
+.sim-btn:hover {
+  background: var(--blue); transform: translateY(-2px);
+}
+.sim-btn i {
+  font-size: 16px;
+}
+
+/* Depoimentos (igual) */
+.testi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 52px; }
+.testi {
+  background: var(--cream); border-radius: var(--r); padding: 28px;
+  border: 1px solid rgba(201,168,76,.15);
+  transition: transform .25s, box-shadow .25s;
+}
+.testi:hover { transform: translateY(-4px); box-shadow: var(--shadow-sm); }
+.testi-stars { color: var(--gold); font-size: 16px; margin-bottom: 14px; }
+.testi-text { font-size: 15px; line-height: 1.7; color: var(--ink2); margin-bottom: 20px; font-style: italic; }
+.testi-author { display: flex; align-items: center; gap: 12px; }
+.testi-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--ink); color: var(--gold); font-weight: 700; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+.testi-name { font-weight: 600; font-size: 14px; color: var(--ink); }
+.testi-role { font-size: 12px; color: var(--gray); }
+
+/* Footer (igual) */
+.footer {
+  background: var(--ink); color: rgba(255,255,255,.6);
+  padding: 60px 5vw 30px;
+}
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 48px; }
+.footer-brand .logo-text { color: rgba(255,255,255,.9); }
+.footer-brand p { font-size: 14px; line-height: 1.7; margin-top: 14px; color: rgba(255,255,255,.5); }
+.footer h4 { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.4); margin-bottom: 16px; }
+.footer ul { list-style: none; }
+.footer ul li { margin-bottom: 10px; }
+.footer ul a { font-size: 14px; color: rgba(255,255,255,.6); text-decoration: none; transition: color .2s; }
+.footer ul a:hover { color: var(--gold2); }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,.08); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.footer-bottom p { font-size: 13px; }
+.footer-bottom a { color: var(--gold); text-decoration: none; }
+.footer-bottom i { color: #ff4d4d; margin: 0 2px; }
+
+/* Theme toggle */
+.theme-toggle {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--ink); color: var(--gold2); border: none; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(10,22,40,.25); font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s;
+}
+.theme-toggle:hover { transform: scale(1.1); }
+
+/* Dark mode */
+body.dark {
+  --ink:   #e2e8f0; --ink2: #94a3b8; --cream: #0f172a; --cream2: #1e293b;
+  --white: #1e293b; --light: #0f172a; --gray: #64748b;
+}
+body.dark .header { background: rgba(15,23,42,.92); border-bottom-color: rgba(201,168,76,.1); }
+body.dark .step { background: #1e293b; border-color: rgba(255,255,255,.06); }
+body.dark .sim-card { background: #1e293b; border-color: rgba(255,255,255,.06); }
+body.dark .login-card { background: #1e293b; border-color: rgba(201,168,76,.1); }
+body.dark .lc-tabs { background: rgba(255,255,255,.05); }
+body.dark .lc-tab.active { background: #0f172a; }
+body.dark .field input { background: #0f172a; border-color: rgba(255,255,255,.1); color: #e2e8f0; }
+body.dark .lc-hint { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.06); }
+body.dark .testi { background: #1e293b; }
+body.dark .footer { background: #020817; }
+body.dark .theme-toggle { background: #e2e8f0; color: #0f172a; }
+
+/* Reveal */
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity .7s, transform .7s; }
+.reveal.visible { opacity: 1; transform: none; }
+
+/* Responsive */
+@media(max-width: 900px) {
+  .hero { grid-template-columns: 1fr; padding-top: 100px; }
+  .hero-visual { order: -1; }
+  .banking-card { max-width: 380px; margin: 0 auto; }
+  .simulator { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .nav a:not(.btn-login):not(:last-child) { display: none; }
+}
+@media(max-width: 600px) {
+  .hero h1 { font-size: 32px; }
+  .footer-grid { grid-template-columns: 1fr; }
+  .fw-1, .fw-2 { display: none; }
+  .hero-stats { gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header" id="header">
+  <a href="/" class="logo-wrap">
+    <img src="{% static 'images/logo/logo.png' %}" style="width: 70px; height: 70px;" alt="Logo OSM" loading="lazy">
+    <span class="logo-text">Office Semente <span>Microcrédito</span></span>
+  </a>
+  <nav class="nav">
+    <a href="#como-funciona">Como Funciona</a>
+    <a href="#produtos">Produtos</a>
+    <a href="#simulador">Simulador</a>
+    <a href="/login/" class="btn-login">Entrar <i class="fas fa-arrow-right"></i></a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <h1>Financiamento que<br><em>Cresce Consigo</em></h1>
+    <p>Acesso rápido a crédito para comerciantes e empreendedores. Processo simples, transparente e digital — do pedido ao contrato em minutos.</p>
+    <div class="hero-cta">
+      <a href="/solicitar/" class="btn-primary"><i class="fas fa-file-pen"></i> Solicitar Empréstimo <i class="fas fa-arrow-right arr"></i></a>
+      <a href="/login/" class="btn-secondary"><i class="fas fa-right-to-bracket"></i> Entrar na Plataforma</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num" id="c-clientes">0</div><div class="stat-label">Clientes Activos</div></div>
+      <div class="stat-sep"></div>
+      <div class="stat"><div class="stat-num" id="c-contratos">0</div><div class="stat-label">Contratos Aprovados</div></div>
+      <div class="stat-sep"></div>
+      <div class="stat"><div class="stat-num" id="c-anos">2</div><div class="stat-label">Anos de Experiência</div></div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="banking-card">
+      <div class="card-chip" style="background-color: hsl(56, 80%, 61%);"></div>
+      <div class="card-number">OSM •••• •••• 2024</div>
+      <div class="card-footer">
+        <div>
+          <div class="card-label">Titular</div>
+          <div class="card-value">Office Semente</div>
+        </div>
+        <div>
+          <div class="card-label">Válido até</div>
+          <div class="card-value">12/26</div>
+        </div>
+      </div>
+    </div>
+    <div class="float-widget fw-1">
+      <div class="fw-icon"><i class="fas fa-sack-dollar" style="color: #2e7d32;"></i></div>
+      <div><div class="fw-value">MT 50.000</div><div class="fw-label">Aprovado hoje</div></div>
+    </div>
+    <div class="float-widget fw-2">
+      <div class="fw-icon"><i class="fas fa-chart-line" style="color: #1565c0;"></i></div>
+      <div><div class="fw-value">Score A</div><div class="fw-label">Risco baixo</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="section" id="como-funciona">
+  <div style="text-align:center;margin-bottom:56px" class="reveal">
+    <div class="section-label">Processo Simples</div>
+    <h2 class="section-title">Como Obter o Seu Crédito</h2>
+    <p class="section-sub" style="margin:0 auto">Quatro passos simples para aceder ao financiamento que precisa, com total transparência.</p>
+  </div>
+  <div class="steps-grid">
+    <div class="step reveal" data-n="01">
+      <div class="step-icon"><i class="fas fa-file-signature"></i></div>
+      <h3>Registe-se</h3>
+      <p>Crie a sua conta de cliente. Um gestor OSM contacta-o e entrega as suas credenciais de acesso pessoalmente ou por email.</p>
+    </div>
+    <div class="step reveal" data-n="02">
+      <div class="step-icon"><i class="fas fa-mobile-alt"></i></div>
+      <h3>Submeta o Pedido</h3>
+      <p>Aceda ao portal e preencha o formulário de requisição com o valor, finalidade e garantia. Simples e rápido.</p>
+    </div>
+    <div class="step reveal" data-n="03">
+      <div class="step-icon"><i class="fas fa-check-circle"></i></div>
+      <h3>Aprovação Rápida</h3>
+      <p>A nossa equipa analisa o pedido e dá resposta em 24h. Recebe notificação por SMS e no portal imediatamente.</p>
+    </div>
+    <div class="step reveal" data-n="04">
+      <div class="step-icon"><i class="fas fa-briefcase"></i></div>
+      <h3>Receba e Gira</h3>
+      <p>Levantamento imediato após aprovação. Acompanhe pagamentos, contratos e histórico 24/7 no seu portal digital.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUTOS -->
+<section class="section products-bg" id="produtos">
+  <div style="text-align:center;margin-bottom:0" class="reveal">
+    <div class="section-label" style="color:var(--gold2)">Soluções Financeiras</div>
+    <h2 class="section-title" style="color:var(--white)">Produtos Disponíveis</h2>
+  </div>
+  <div class="products-grid">
+    <div class="product-card reveal">
+      <div class="pc-badge">Mais Popular</div>
+      <h3>Crédito Pessoal</h3>
+      <p>Financiamento até 24 meses para necessidades pessoais e familiares, com taxa competitiva.</p>
+      <div class="pc-rate">30% <span>/ mês</span></div>
+    </div>
+    <div class="product-card reveal">
+      <div class="pc-badge">Comerciantes</div>
+      <h3>Crédito Diário</h3>
+      <p>Capital de giro para comerciantes com pagamento diário durante 30 dias. Ideal para o mercado.</p>
+      <div class="pc-rate">30% <span>/ 30 dias</span></div>
+    </div>
+    <div class="product-card reveal">
+      <div class="pc-badge">Negócios</div>
+      <h3>Crédito Empresarial</h3>
+      <p>Financiamento para expansão de negócios, aquisição de equipamentos e capital de giro de médio prazo.</p>
+      <div class="pc-rate">25% <span>/ mês</span></div>
+    </div>
+    <div class="product-card reveal">
+      <div class="pc-badge">Agricultura</div>
+      <h3>Crédito Rural</h3>
+      <p>Apoio financeiro para agricultores e pescadores com condições especiais adaptadas à sazonalidade.</p>
+      <div class="pc-rate">20% <span>/ mês</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SIMULADOR (MELHORADO) -->
+<section class="section" id="simulador" style="background:var(--cream)">
+  <div class="simulator">
+    <div class="reveal">
+      <div class="section-label">Calcule Antes de Decidir</div>
+      <h2 class="section-title">Simulador de Crédito</h2>
+      <p class="section-sub">Descubra o valor da sua parcela antes de submeter o pedido. Totalmente indicativo e sem compromisso.</p>
+      <br>
+      <p style="font-size:14px;color:var(--gray);line-height:1.7">Após simulação, aceda ao portal para submeter o pedido formal. A aprovação é analisada individualmente pela nossa equipa.</p>
+    </div>
+    <div class="sim-card reveal">
+      <!-- Capital -->
+      <div class="sim-label"><i class="fas fa-coins"></i> Capital Pretendido</div>
+      <div class="sim-value" id="sim-cap-val">MT 25.000</div>
+      <input type="range" class="sim-range" id="sim-capital" min="1000" max="500000" step="1000" value="25000" oninput="syncInput('cap')">
+      <div class="sim-number">
+        <input type="number" id="cap-number" value="25000" step="1000" min="1000" max="500000" oninput="syncSlider('cap')">
+        <span class="unit">MT</span>
+      </div>
+
+      <!-- Parcelas -->
+      <div class="sim-label"><i class="fas fa-calendar-alt"></i> Número de Parcelas</div>
+      <div class="sim-value" id="sim-parc-val">12 meses</div>
+      <input type="range" class="sim-range" id="sim-parcelas" min="1" max="24" step="1" value="12" oninput="syncInput('parc')">
+      <div class="sim-number">
+        <input type="number" id="parc-number" value="12" step="1" min="1" max="24" oninput="syncSlider('parc')">
+        <span class="unit">meses</span>
+      </div>
+
+      <!-- Taxa de Juro -->
+      <div class="sim-label"><i class="fas fa-percent"></i> Taxa de Juro</div>
+      <div class="sim-value" id="sim-taxa-val">30% / mês</div>
+      <input type="range" class="sim-range" id="sim-taxa" min="10" max="50" step="5" value="30" oninput="syncInput('taxa')">
+      <div class="sim-number">
+        <input type="number" id="taxa-number" value="30" step="5" min="10" max="50" oninput="syncSlider('taxa')">
+        <span class="unit">% / mês</span>
+      </div>
+
+      <!-- Resultados aprimorados -->
+      <div class="sim-result" id="sim-result">
+        <div class="sim-result-grid">
+          <div class="sr-item"><div class="sr-label"><i class="fas fa-wallet"></i> Parcela Mensal</div><div class="sr-val" id="sr-parcela">—</div></div>
+          <div class="sr-item"><div class="sr-label"><i class="fas fa-chart-line"></i> Total a Pagar</div><div class="sr-val" id="sr-total">—</div></div>
+          <div class="sr-item"><div class="sr-label"><i class="fas fa-percent"></i> Total Juros</div><div class="sr-val" id="sr-juros">—</div></div>
+          <div class="sr-item"><div class="sr-label"><i class="fas fa-tachometer-alt"></i> Taxa Mensal</div><div class="sr-val" id="sr-taxa2">—</div></div>
+        </div>
+        <div class="sim-progress">
+          <div class="sim-progress-fill" id="sim-progress-fill"></div>
+        </div>
+        <div class="sim-breakdown">
+          <span><i class="fa-solid fa-chart-bar"></i> Juros: <strong id="break-juros">0 MT</strong></span>
+          <span><i class="fa-solid fa-coins"></i> Capital: <strong id="break-cap">0 MT</strong></span>
+        </div>
+      </div>
+      <a href="/solicitar/" class="sim-btn"><i class="fas fa-file-pen"></i> Solicitar Este Crédito <i class="fas fa-arrow-right"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- DEPOIMENTOS -->
+<section class="section">
+  <div style="text-align:center;margin-bottom:0" class="reveal">
+    <div class="section-label">O Que Dizem</div>
+    <h2 class="section-title">Clientes Satisfeitos</h2>
+  </div>
+  <div class="testi-grid">
+    <div class="testi reveal">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">"Processo rápido e sem burocracia. Em 24 horas tinha o dinheiro para reabastecer a minha barraca no mercado. Recomendo!"</p>
+      <div class="testi-author">
+        <div class="testi-avatar">FM</div>
+        <div><div class="testi-name">Fátima Machava</div><div class="testi-role">Comerciante, Mercado Central</div></div>
+      </div>
+    </div>
+    <div class="testi reveal">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">"O portal digital é muito fácil de usar. Consigo ver os meus pagamentos e descarregar os contratos a qualquer hora."</p>
+      <div class="testi-author">
+        <div class="testi-avatar">JN</div>
+        <div><div class="testi-name">João Nhantumbo</div><div class="testi-role">Agricultor, Sussundenga</div></div>
+      </div>
+    </div>
+    <div class="testi reveal">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">"Já renovei três vezes o crédito. A equipa da OSM é profissional e as condições são transparentes desde o início."</p>
+      <div class="testi-author">
+        <div class="testi-avatar">MP</div>
+        <div><div class="testi-name">Maria Pereira</div><div class="testi-role">Salão de Beleza, Chimoio</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="logo-wrap" style="margin-bottom:0">
+        <img src="{% static 'images/logo/logo.png' %}" style="width: 50px; height: 50px;" alt="Logo OSM" loading="lazy">
+        <span class="logo-text">Office Semente <span>Microcrédito</span></span>
+      </div>
+      <p>Financiamento acessível e transparente para comerciantes e empreendedores de Moçambique. Registado na Conservatória de Chimoio.</p>
+    </div>
+    <div>
+      <h4>Empresa</h4>
+      <ul>
+        <li><a href="#como-funciona">Como Funciona</a></li>
+        <li><a href="#produtos">Produtos</a></li>
+        <li><a href="#simulador">Simulador</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Termos de Uso</a></li>
+        <li><a href="#">Privacidade</a></li>
+        <li><a href="#">NUIT: 150493129</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Contacto</h4>
+      <ul>
+        <li><a href="#">EN6 Bairro Centro Hípico</a></li>
+        <li><a href="#">Chimoio, Manica</a></li>
+        <li><a href="mailto:officebernardo@gmail.com">officebernardo@gmail.com</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2024 Office Semente Microcrédito, E.I. — Todos os direitos reservados.</p>
+    <p>Feito Por Filipe Manuel Mapulango <i class="fas fa-heart"></i> em Chimoio, Moçambique</p>
+  </div>
+</footer>
+
+<button class="theme-toggle" id="theme-toggle" onclick="toggleDark()" title="Alternar tema">
+  <i class="fas fa-moon"></i>
+</button>
+
+<script>
+// Scroll header
+window.addEventListener('scroll', () => {
+  document.getElementById('header').classList.toggle('scrolled', scrollY > 20);
+});
+
+// Reveal on scroll
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Contadores
+function animateCounter(id, target, prefix='') {
+  const el = document.getElementById(id);
+  if(!el) return;
+  let current = 0;
+  const step = target / 50;
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = prefix + Math.floor(current).toLocaleString('pt-PT');
+    if(current >= target) clearInterval(timer);
+  }, 30);
+}
+setTimeout(() => {
+  animateCounter('c-clientes',   247);
+  animateCounter('c-contratos',  412);
+}, 600);
+
+// SIMULADOR MELHORADO: sincronia entre slider e input numérico
+function fmtMT(v) { return 'MT ' + Math.round(v).toLocaleString('pt-PT'); }
+
+function syncInput(type) {
+  let val;
+  if (type === 'cap') {
+    val = parseInt(document.getElementById('sim-capital').value);
+    document.getElementById('cap-number').value = val;
+  } else if (type === 'parc') {
+    val = parseInt(document.getElementById('sim-parcelas').value);
+    document.getElementById('parc-number').value = val;
+  } else if (type === 'taxa') {
+    val = parseInt(document.getElementById('sim-taxa').value);
+    document.getElementById('taxa-number').value = val;
+  }
+  calcSim();
+}
+
+function syncSlider(type) {
+  let val;
+  if (type === 'cap') {
+    val = parseInt(document.getElementById('cap-number').value);
+    if (val < 1000) val = 1000;
+    if (val > 500000) val = 500000;
+    document.getElementById('sim-capital').value = val;
+  } else if (type === 'parc') {
+    val = parseInt(document.getElementById('parc-number').value);
+    if (val < 1) val = 1;
+    if (val > 24) val = 24;
+    document.getElementById('sim-parcelas').value = val;
+  } else if (type === 'taxa') {
+    val = parseInt(document.getElementById('taxa-number').value);
+    if (val < 10) val = 10;
+    if (val > 50) val = 50;
+    document.getElementById('sim-taxa').value = val;
+  }
+  calcSim();
+}
+
+function calcSim() {
+  const cap = parseFloat(document.getElementById('sim-capital').value) || 0;
+  const parc = parseInt(document.getElementById('sim-parcelas').value) || 12;
+  const taxa = parseFloat(document.getElementById('sim-taxa').value) || 30;
+  // Atualiza os displays
+  document.getElementById('sim-cap-val').textContent = fmtMT(cap);
+  document.getElementById('sim-parc-val').textContent = parc + ' meses';
+  document.getElementById('sim-taxa-val').textContent = taxa + '% / mês';
+  // Cálculo (juros simples mensal)
+  const total = cap * (1 + taxa/100 * parc/12);
+  const juros = total - cap;
+  const mensal = total / parc;
+  document.getElementById('sr-parcela').textContent = fmtMT(mensal);
+  document.getElementById('sr-total').textContent = fmtMT(total);
+  document.getElementById('sr-juros').textContent = fmtMT(juros);
+  document.getElementById('sr-taxa2').textContent = taxa + '%/mês';
+  document.getElementById('break-juros').textContent = fmtMT(juros);
+  document.getElementById('break-cap').textContent = fmtMT(cap);
+  // Barra de progresso: relação entre juros e total (0 a 1)
+  const percent = (juros / total) * 100;
+  document.getElementById('sim-progress-fill').style.width = percent + '%';
+}
+calcSim();
+
+// Dark mode
+function toggleDark() {
+  const body = document.body;
+  const btn  = document.getElementById('theme-toggle');
+  body.classList.toggle('dark');
+  btn.innerHTML = body.classList.contains('dark') ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  localStorage.setItem('osm-theme', body.classList.contains('dark') ? 'dark' : 'light');
+}
+if(localStorage.getItem('osm-theme') === 'dark') {
+  document.body.classList.add('dark');
+  document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-sun"></i>';
+}
+</script>
+</body>
+</html>

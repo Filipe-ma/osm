@@ -1,0 +1,295 @@
+{% extends "osm/base.html" %}
+{% block title %}{% if editar %}Editar{% else %}Novo{% endif %} Utilizador — OSM{% endblock %}
+{% block nav_utilizadores %}active{% endblock %}
+{% block topbar_title %}{% if editar %}Editar Utilizador{% else %}Novo Utilizador{% endif %}{% endblock %}
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+<a href="{% url 'utilizadores' %}" class="btn btn-secondary btn-sm">← Voltar</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" style="max-width:660px">
+    {% csrf_token %}
+    <div class="card">
+        <div class="card-header">
+            <div><div class="card-title"><i class="fa-solid fa-user"></i> Dados Pessoais</div></div>
+        </div>
+        <div class="card-body">
+            <div class="form-grid-2">
+                <div class="form-group"><label class="form-label">Nome *</label><input name="nome" class="form-control" placeholder="Primeiro nome" value="{{ u.first_name|default:'' }}" required></div>
+                <div class="form-group"><label class="form-label">Apelido</label><input name="apelido" class="form-control" value="{{ u.last_name|default:'' }}"></div>
+                <div class="form-group"><label class="form-label">NUIT</label><input name="nuit" class="form-control" value="{{ u.nuit|default:'' }}"></div>
+                <div class="form-group"><label class="form-label">Nº BI</label><input name="bi" class="form-control" value="{{ u.bi|default:'' }}"></div>
+                <div class="form-group"><label class="form-label">Telefone *</label><input name="telefone" class="form-control" type="tel" placeholder="+258 84 000 0000" value="{{ u.telefone|default:'' }}" required></div>
+                <div class="form-group"><label class="form-label">Cargo</label><input name="cargo" class="form-control" placeholder="Ex: Gestor de Crédito" value="{{ u.cargo|default:'' }}"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div><div class="card-title"><i class="fa-solid fa-lock"></i> Acesso</div></div>
+        </div>
+        <div class="card-body">
+            <div class="form-grid-2">
+                <div class="form-group"><label class="form-label">Email *</label><input name="email" class="form-control" type="email" value="{{ u.email|default:'' }}" required></div>
+                <div class="form-group">
+                    <label class="form-label">Perfil de Acesso</label>
+                    <select name="perfil" class="form-control" id="perfil-sel" onchange="togglePerms()">
+                        <option value="gestor" {% if u.perfil == 'gestor' %}selected{% endif %}>Gestor de Crédito</option>
+                        <option value="cliente" {% if u.perfil == 'cliente' %}selected{% endif %}>Cliente</option>
+                    </select>
+                </div>
+            </div>
+            {% if not editar %}
+            <div class="alert alert-info"><i class="fa-solid fa-key"></i> Username e password serão gerados automaticamente e enviados por SMS e email. Na primeira sessão será obrigatório trocar as credenciais.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Permissões (só para gestores) -->
+    <div class="card" id="perms-block">
+        <div class="card-header">
+            <div>
+                <div class="card-title"><i class="fa-solid fa-shield-halved"></i> Permissões do Gestor</div>
+                <div class="card-sub" style="font-size:12px;color:var(--text3);margin-top:2px">
+                    Controlo granular de acesso ao sistema
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Grupo: Operações -->
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">
+                <i class="fa-solid fa-bolt"></i> Operações
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:16px">
+                {% for name, label, icon, tip in perm_operacoes %}
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;padding:12px;border:1px solid var(--border);border-radius:10px;transition:border-color .15s;background:var(--surface2)"
+                       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <input type="checkbox" name="{{ name }}" style="margin-top:2px;accent-color:var(--accent)"
+                           {% if u and u|attr:name %}checked{% endif %}>
+                    <div>
+                        <div style="font-weight:600;display:flex;align-items:center;gap:5px">
+                            <i class="{{ icon }}" style="color:var(--accent);font-size:12px"></i> {{ label }}
+                        </div>
+                        <div style="font-size:11px;color:var(--text3);margin-top:2px">{{ tip }}</div>
+                    </div>
+                </label>
+                {% empty %}
+                <!-- Fallback estático se contexto não tiver perm_operacoes -->
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_aprovar" {% if u and u.perm_aprovar %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-circle-check" style="color:var(--accent);font-size:12px"></i> Aprovar Empréstimos</div>
+                    <div style="font-size:11px;color:var(--text3)">Aprovar, rejeitar e validar pagamentos</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_eliminar" {% if u and u.perm_eliminar %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-trash" style="color:var(--danger);font-size:12px"></i> Eliminar Registos</div>
+                    <div style="font-size:11px;color:var(--text3)">Apagar empréstimos e dados</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_sms" {% if u and u.perm_sms %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-comment-sms" style="color:var(--accent);font-size:12px"></i> Enviar SMS & Email</div>
+                    <div style="font-size:11px;color:var(--text3)">Aceder ao módulo de cobrança</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_exportar" {% if u and u.perm_exportar %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-file-export" style="color:var(--accent);font-size:12px"></i> Exportar Dados</div>
+                    <div style="font-size:11px;color:var(--text3)">Exportar CSV e relatórios</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_comerciantes" {% if u and u.perm_comerciantes %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-store" style="color:var(--accent);font-size:12px"></i> Gestão Comerciantes</div>
+                    <div style="font-size:11px;color:var(--text3)">Ver e registar pagamentos diários</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_relatorios" {% if u and u.perm_relatorios %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-chart-bar" style="color:var(--accent);font-size:12px"></i> Ver Relatórios</div>
+                    <div style="font-size:11px;color:var(--text3)">Aceder ao módulo de relatórios</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_inadimplencia" {% if u and u.perm_inadimplencia %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-triangle-exclamation" style="color:var(--warn);font-size:12px"></i> Painel Inadimplência</div>
+                    <div style="font-size:11px;color:var(--text3)">Ver clientes em incumprimento</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_lancamentos" {% if u and u.perm_lancamentos %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-money-bill-transfer" style="color:var(--accent);font-size:12px"></i> Lançar Pagamentos</div>
+                    <div style="font-size:11px;color:var(--text3)">Registar e submeter pagamentos</div></div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px">
+                    <input type="checkbox" name="perm_solicitacoes" {% if u and u.perm_solicitacoes %}checked{% endif %}
+                           style="accent-color:var(--accent)">
+                    <div><div style="font-weight:600"><i class="fa-solid fa-file-pen" style="color:var(--accent);font-size:12px"></i> Solicitações Públicas</div>
+                    <div style="font-size:11px;color:var(--text3)">Analisar pedidos de crédito</div></div>
+                </label>
+                {% endfor %}
+            </div>
+
+            <!-- Grupo: Administração -->
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:8px">
+                <i class="fa-solid fa-crown"></i> Administração
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:16px">
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2)"
+                       onmouseover="this.style.borderColor='var(--warn)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <input type="checkbox" name="perm_utilizadores" style="margin-top:2px;accent-color:var(--warn)"
+                           {% if u and u.perm_utilizadores %}checked{% endif %}>
+                    <div>
+                        <div style="font-weight:600;display:flex;align-items:center;gap:5px">
+                            <i class="fa-solid fa-users-gear" style="color:var(--warn);font-size:12px"></i> Gerir Utilizadores
+                        </div>
+                        <div style="font-size:11px;color:var(--text3);margin-top:2px">Criar, editar e activar utilizadores</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2)"
+                       onmouseover="this.style.borderColor='var(--warn)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <input type="checkbox" name="perm_config" style="margin-top:2px;accent-color:var(--warn)"
+                           {% if u and u.perm_config %}checked{% endif %}>
+                    <div>
+                        <div style="font-weight:600;display:flex;align-items:center;gap:5px">
+                            <i class="fa-solid fa-gear" style="color:var(--warn);font-size:12px"></i> Configurações
+                        </div>
+                        <div style="font-size:11px;color:var(--text3);margin-top:2px">Aceder às configurações do sistema</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2)"
+                       onmouseover="this.style.borderColor='var(--danger)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <input type="checkbox" name="perm_tribunal" style="margin-top:2px;accent-color:var(--danger)"
+                           {% if u and u.perm_tribunal %}checked{% endif %}>
+                    <div>
+                        <div style="font-weight:600;display:flex;align-items:center;gap:5px">
+                            <i class="fa-solid fa-scale-balanced" style="color:var(--danger);font-size:12px"></i> Tribunal & Multas
+                        </div>
+                        <div style="font-size:11px;color:var(--text3);margin-top:2px">Enviar para tribunal, cancelar multas</div>
+                    </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2)"
+                       onmouseover="this.style.borderColor='var(--danger)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <input type="checkbox" name="perm_lista_negra" style="margin-top:2px;accent-color:var(--danger)"
+                           {% if u and u.perm_lista_negra %}checked{% endif %}>
+                    <div>
+                        <div style="font-weight:600;display:flex;align-items:center;gap:5px">
+                            <i class="fa-solid fa-ban" style="color:var(--danger);font-size:12px"></i> Lista Negra
+                        </div>
+                        <div style="font-size:11px;color:var(--text3);margin-top:2px">Adicionar/remover clientes da lista negra</div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Limite de crédito -->
+            <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px">
+                <div class="form-group" style="max-width:280px">
+                    <label class="form-label"><i class="fa-solid fa-coins"></i> Limite de Empréstimo (MT)</label>
+                    <input name="limite_emprestimo" class="form-control" type="number" step="500" min="0"
+                           placeholder="0 = sem limite"
+                           value="{{ u.limite_emprestimo|default:'0' }}">
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">
+                        Valor máximo que este gestor pode aprovar por empréstimo. 0 = sem restrição.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-primary btn-lg" style="flex:1">{% if editar %}<i class="fa-solid fa-floppy-disk"></i> Guardar{% else %}<i class="fa-solid fa-check"></i> Criar Utilizador{% endif %}</button>
+        <a href="{% url 'utilizadores' %}" class="btn btn-secondary btn-lg">Cancelar</a>
+    </div>
+
+    <div id="cliente-block" style="display:none">
+        <!-- Tipo de Cliente (v3) -->
+        <div class="form-group">
+            <label class="form-label">
+                <i class="fa-solid fa-user-tag"></i> Tipo de Cliente
+            </label>
+            <select name="tipo_cliente" class="form-control">
+                <option value="normal" {% if not u or u.tipo_cliente == 'normal' %}selected{% endif %}>
+                    Cliente Normal (Mensal)
+                </option>
+                <option value="comerciante" {% if u and u.tipo_cliente == 'comerciante' %}selected{% endif %}>
+                    Cliente Comerciante (Diário/Semanal)
+                </option>
+            </select>
+            <div class="form-hint">Determina a modalidade de pagamento dos empréstimos.</div>
+        </div>
+
+        {% if u %}
+            <!-- Conversão rápida de tipo -->
+            <form method="post" action="{% url 'converter_tipo_cliente' u.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm"
+                        onclick="return confirm('Converter tipo de cliente?')">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    Converter para {% if u.tipo_cliente == 'normal' %}Comerciante{% else %}Normal{% endif %}
+                </button>
+            </form>
+
+            {% if u and u.perfil == 'cliente' %}
+                <!-- Lista Negra (v3) -->
+                <div class="form-group" style="border:1px solid {% if u.lista_negra %}var(--danger){% else %}var(--border){% endif %};border-radius:9px;padding:14px;margin-top:20px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                        <div>
+                            <div style="font-size:13px;font-weight:700;color:{% if u.lista_negra %}var(--danger){% else %}var(--text){% endif %}">
+                                <i class="fa-solid fa-ban"></i>
+                                Lista Negra — {% if u.lista_negra %}ACTIVO{% else %}Inactivo{% endif %}
+                            </div>
+                            <div style="font-size:11px;color:var(--text3);margin-top:2px">
+                                {% if u.lista_negra %}
+                                    Cliente bloqueado permanentemente. Motivo: {{ u.motivo_lista_negra|default:"Não especificado" }}
+                                {% else %}
+                                    Cliente pode solicitar empréstimos normalmente.
+                                {% endif %}
+                            </div>
+                        </div>
+                        <form method="post" action="{% url 'lista_negra_toggle' u.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="motivo" value="{{ u.motivo_lista_negra }}">
+                            <button type="submit" class="btn btn-sm {% if u.lista_negra %}btn-success{% else %}btn-danger{% endif %}"
+                                    onclick="return confirm('{% if u.lista_negra %}Remover da lista negra?{% else %}Adicionar à lista negra?{% endif %}')">
+                                {% if u.lista_negra %}
+                                    <i class="fa-solid fa-unlock"></i> Remover
+                                {% else %}
+                                    <i class="fa-solid fa-ban"></i> Adicionar
+                                {% endif %}
+                            </button>
+                        </form>
+                    </div>
+                    {% if u.bloqueado_ate %}
+                    <div style="font-size:11px;color:var(--warn);background:var(--warn-l);padding:6px 10px;border-radius:6px;margin-top:8px">
+                        <i class="fa-solid fa-clock"></i>
+                        Bloqueio temporário activo até {{ u.bloqueado_ate|date:"d/m/Y" }}
+                        (rejeição do gestor — libera no dia seguinte)
+                    </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>{# fecha #cliente-block #}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePerms(){
+    var v = document.getElementById('perfil-sel').value;
+    var permsBlock = document.getElementById('perms-block');
+    var clienteBlock = document.getElementById('cliente-block');
+    if (permsBlock) {
+        permsBlock.style.display = v === 'gestor' ? 'block' : 'none';
+    }
+    if (clienteBlock) {
+        clienteBlock.style.display = v === 'cliente' ? 'block' : 'none';
+    }
+}
+togglePerms();
+</script>
+{% endblock %}

@@ -1,0 +1,1211 @@
+{% extends "osm/base.html" %}
+{% load static %}
+
+{% block title %}Cobrança SMS — OSM{% endblock %}
+{% block nav_cobranca %}active{% endblock %}
+{% block topbar_title %}Cobrança — SMS & Email{% endblock %}
+{% block topbar_sub %}
+    {{ em_atraso|length }} empréstimo(s) em atraso
+    · {{ comerciantes_em_atraso|length }} comerciante(s) em atraso
+    · {{ sms_history|length }} SMS na API
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="topbar-btn"><i class="fa-solid fa-arrow-left"></i></a>
+{% if em_atraso or comerciantes_em_atraso %}
+<form method="post" action="{% url 'sms_bulk' %}" style="display:inline"
+      onsubmit="return confirm('Enviar SMS de cobrança a todos os clientes e comerciantes em atraso?')">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger btn-sm">
+    <i class="fa-solid fa-bullhorn"></i>
+    <span class="btn-label">Enviar a Todos ({{ total_atraso }})</span>
+  </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ══════════════════════════════════════════════
+   LAYOUT PRINCIPAL — RESPONSIVO
+══════════════════════════════════════════════ */
+.sms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .sms-grid { grid-template-columns: 1fr; }
+}
+
+/* ══════════════════════════════════════════════
+   TOPBAR ACTIONS — responsivo
+══════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .btn-label { display: none; }
+}
+
+/* ══════════════════════════════════════════════
+   BANNER / ALERTA
+══════════════════════════════════════════════ */
+.no-api-banner {
+  background: linear-gradient(135deg, rgba(230,81,0,.08), rgba(230,81,0,.04));
+  border: 1.5px solid rgba(230,81,0,.25);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.no-api-banner .banner-icon {
+  color: var(--warn);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.no-api-banner .banner-body { flex: 1; min-width: 180px; }
+.no-api-banner .banner-title {
+  font-size: 13px; font-weight: 700; color: var(--warn);
+}
+.no-api-banner .banner-sub {
+  font-size: 12px; color: var(--text2); margin-top: 2px;
+}
+.api-error {
+  background: #fff3cd; border: 1px solid #ffeaa7;
+  color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 16px;
+}
+
+/* ══════════════════════════════════════════════
+   BANK CARD
+══════════════════════════════════════════════ */
+.bank-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+@media (max-width: 480px) {
+  .bank-grid { grid-template-columns: 1fr; }
+  .bank-field-full { grid-column: span 1 !important; }
+  .bank-field-pad  { padding-left: 0 !important; }
+}
+.bank-field { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.bank-field:last-child { border-bottom: none; }
+.bank-label {
+  font-size: 10px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px;
+  display: flex; align-items: center; gap: 5px;
+}
+.bank-val   { font-size: 13px; font-weight: 600; color: var(--text); }
+.bank-val.mono { font-family: var(--ff-mono); font-weight: 700; }
+
+/* ══════════════════════════════════════════════
+   TABS
+══════════════════════════════════════════════ */
+.dest-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dest-tabs::-webkit-scrollbar { display: none; }
+.dest-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 14px; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; border: none; background: none;
+  color: var(--text3); border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: all .15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.dest-tab:hover { color: var(--text2); background: var(--surface2); }
+.dest-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.dest-tab .tab-badge {
+  font-size: 10px; font-weight: 700; padding: 1px 7px;
+  border-radius: 10px; min-width: 18px; text-align: center;
+}
+.dest-tab.active .tab-badge { background: var(--accent); color: #fff; }
+.dest-tab:not(.active) .tab-badge { background: var(--border); color: var(--text3); }
+.dest-panel { display: none; }
+.dest-panel.active { display: block; }
+
+/* ══════════════════════════════════════════════
+   CONTADORES
+══════════════════════════════════════════════ */
+#sel-count-emp, #sel-count-com {
+  font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 700;
+}
+#sel-count-emp   { background: var(--accent-l); color: var(--accent); }
+#sel-count-com   { background: var(--gold-l);   color: var(--gold-d); }
+#sel-count-total {
+  font-size: 11px; background: var(--danger-l); color: var(--danger);
+  padding: 3px 9px; border-radius: 20px; font-weight: 700;
+}
+
+/* ══════════════════════════════════════════════
+   CHAR COUNTER
+══════════════════════════════════════════════ */
+.sms-char-counter {
+  font-size: 11px; color: var(--text3);
+  text-align: right; margin-top: 3px; transition: color .2s;
+  display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+}
+.sms-char-counter.warn { color: var(--warn); font-weight: 700; }
+.sms-char-counter.over { color: var(--danger); font-weight: 700; }
+
+/* ══════════════════════════════════════════════
+   TEMPLATE CHIPS & GRUPOS
+══════════════════════════════════════════════ */
+.template-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px;
+  border-radius: 20px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--surface2); color: var(--text2);
+  transition: all .15s;
+}
+.template-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-l); }
+.template-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-l); }
+
+.template-group {
+  margin-bottom: 8px; border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.template-group summary {
+  padding: 8px 12px; font-weight: 700; font-size: 12.5px;
+  background: var(--surface2); cursor: pointer; list-style: none;
+  display: flex; align-items: center; gap: 8px; color: var(--text2);
+  user-select: none;
+}
+.template-group summary::-webkit-details-marker { display: none; }
+.template-group .summary-arrow {
+  margin-left: auto; font-size: 10px; transition: transform .2s;
+}
+.template-group[open] .summary-arrow { transform: rotate(90deg); }
+.template-group .group-buttons {
+  padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 7px;
+  background: var(--surface);
+}
+
+/* ══════════════════════════════════════════════
+   ITENS DE DESTINATÁRIOS
+══════════════════════════════════════════════ */
+.filter-input {
+  width: 100%; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 13px; margin-bottom: 10px;
+  box-sizing: border-box;
+}
+.filter-input:focus { outline: none; border-color: var(--accent); }
+
+.cliente-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 8px; cursor: pointer;
+  border: 1.5px solid var(--border); margin-bottom: 5px;
+  transition: all .15s; background: var(--surface2);
+}
+.cliente-item:hover { border-color: rgba(21,101,192,.3); background: var(--accent-l); }
+.cliente-item.selected     { border-color: var(--accent); background: var(--accent-l); }
+.cliente-item.com-selected { border-color: var(--gold);   background: var(--gold-l); }
+.cliente-item input[type=checkbox] {
+  accent-color: var(--accent); width: 16px; height: 16px;
+  cursor: pointer; flex-shrink: 0;
+}
+.cliente-item.com-item input[type=checkbox] { accent-color: var(--gold-d); }
+
+.cliente-nome {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  flex: 1; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.cliente-tel  { font-size: 11px; color: var(--text3); font-family: var(--ff-mono); }
+.cliente-meta { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.mora-badge {
+  font-size: 10px; font-weight: 700; color: var(--danger);
+  background: var(--danger-l); padding: 2px 7px; border-radius: 10px; white-space: nowrap;
+}
+.com-badge {
+  font-size: 10px; font-weight: 700; color: var(--gold-d);
+  background: var(--gold-l); padding: 2px 7px; border-radius: 10px; white-space: nowrap;
+}
+
+.empty-state { text-align: center; padding: 24px; color: var(--text3); }
+.empty-state i { font-size: 28px; display: block; margin-bottom: 10px; }
+
+/* ══════════════════════════════════════════════
+   TIPO ICON CORES
+══════════════════════════════════════════════ */
+.type-icon-emp { color: var(--accent); }
+.type-icon-com { color: var(--gold); }
+
+/* ══════════════════════════════════════════════
+   HISTÓRICO SMS
+══════════════════════════════════════════════ */
+.sms-status-tag {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.sms-status-tag.delivered { background: var(--success-l); color: var(--success); }
+.sms-status-tag.sent      { background: var(--accent-l);  color: var(--accent); }
+.sms-status-tag.failed    { background: var(--danger-l);  color: var(--danger); }
+
+/* Filtros do histórico — responsivos */
+.hist-filters {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.hist-filters .form-control { font-size: 12.5px; }
+@media (max-width: 700px) {
+  .hist-filters { width: 100%; margin-top: 8px; }
+  .hist-filters .form-control,
+  .hist-filters input[type=date] { width: 100% !important; flex: 1 1 140px; }
+}
+
+/* Card header responsivo */
+.card-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Sel-row responsivo */
+.sel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sel-row-btns { display: flex; gap: 5px; flex-shrink: 0; }
+
+/* Tabela responsiva */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 600px) {
+  .table-col-msg { display: none; }
+}
+
+/* Form-group responsivo */
+.bank-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .bank-edit-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not tem_sms_config %}
+<div class="no-api-banner">
+  <i class="fa-solid fa-triangle-exclamation banner-icon"></i>
+  <div class="banner-body">
+    <div class="banner-title">Serviço de SMS não configurado</div>
+    <div class="banner-sub">
+      Os SMS estão em <strong>modo simulação</strong>. Configure o Token MozeSMS para envio real.
+    </div>
+  </div>
+  {% if request.user.eh_superadmin %}
+  <a href="{% url 'configuracoes' %}" class="btn btn-sm" style="background:var(--warn);color:#fff;flex-shrink:0">
+    <i class="fa-solid fa-gear"></i> <span class="btn-label">Configurar</span>
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if api_error %}
+<div class="api-error">
+  <i class="fa-solid fa-circle-exclamation"></i> <strong>Erro na API MozeSMS:</strong> {{ api_error }}
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════
+     GRID PRINCIPAL: Banco + Compor SMS
+══════════════════════════════════════════════ -->
+<div class="sms-grid">
+
+  <!-- ── DADOS BANCÁRIOS ── -->
+  <div class="card">
+    <div class="card-header card-header-flex">
+      <div>
+        <div class="card-title">
+          <i class="fa-solid fa-building-columns"></i> Dados para Pagamento
+        </div>
+        <div class="card-subtitle">Informação enviada nas mensagens de cobrança</div>
+      </div>
+      {% if request.user.eh_superadmin %}
+      <button type="button" class="btn btn-secondary btn-sm" onclick="toggleBankEdit()">
+        <i class="fa-solid fa-pen"></i> <span class="btn-label">Editar</span>
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="card-body" id="bank-view">
+      <div class="bank-grid">
+        <div class="bank-field">
+          <div class="bank-label"><i class="fa-solid fa-landmark"></i> Banco</div>
+          <div class="bank-val">{{ banco.banco }}</div>
+        </div>
+        <div class="bank-field bank-field-pad" style="padding-left:16px">
+          <div class="bank-label"><i class="fa-solid fa-user"></i> Titular</div>
+          <div class="bank-val">{{ banco.titular }}</div>
+        </div>
+        <div class="bank-field">
+          <div class="bank-label"><i class="fa-solid fa-hashtag"></i> Conta</div>
+          <div class="bank-val mono">{{ banco.conta }}</div>
+        </div>
+        <div class="bank-field bank-field-pad" style="padding-left:16px">
+          <div class="bank-label"><i class="fa-solid fa-barcode"></i> NIB</div>
+          <div class="bank-val mono" style="font-size:11.5px">{{ banco.nib }}</div>
+        </div>
+        <div class="bank-field bank-field-full" style="grid-column:span 2">
+          <div class="bank-label"><i class="fa-solid fa-mobile-screen-button"></i> e-Mola</div>
+          <div class="bank-val">{{ banco.emola_numero }} — {{ banco.emola_titular }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bank-edit" style="display:none;padding:18px;border-top:1px solid var(--border)">
+      <form method="post" action="{% url 'banco_editar' %}">
+        {% csrf_token %}
+        <div class="bank-edit-grid">
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-landmark"></i> Banco</label>
+            <input name="banco" class="form-control" value="{{ banco.banco }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-barcode"></i> NIB</label>
+            <input name="nib" class="form-control" value="{{ banco.nib }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-hashtag"></i> Conta</label>
+            <input name="conta" class="form-control" value="{{ banco.conta }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-user"></i> Titular</label>
+            <input name="titular" class="form-control" value="{{ banco.titular }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-mobile-screen-button"></i> e-Mola Nº</label>
+            <input name="emola_numero" class="form-control" value="{{ banco.emola_numero }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-id-card"></i> e-Mola Titular</label>
+            <input name="emola_titular" class="form-control" value="{{ banco.emola_titular }}">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-check"></i> Guardar
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleBankEdit()">
+            <i class="fa-solid fa-xmark"></i> Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── COMPOR SMS ── -->
+  <div class="card">
+    <div class="card-header card-header-flex">
+      <div>
+        <div class="card-title">
+          <i class="fa-solid fa-mobile-screen-button"></i> Compor Mensagem
+        </div>
+        <div class="card-subtitle">Seleccione destinatários e escreva a mensagem</div>
+      </div>
+      <span id="sel-count-total">0 sel.</span>
+    </div>
+
+    <div class="card-body" style="padding-bottom:0">
+      <form method="post" action="{% url 'enviar_sms' %}" id="sms-form">
+        {% csrf_token %}
+
+        <!-- Templates -->
+        <div style="margin-bottom:14px">
+          <div class="form-label" style="margin-bottom:6px">
+            <i class="fa-solid fa-bolt"></i> Templates rápidos
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:2px">
+
+            <details class="template-group" open>
+              <summary>
+                <i class="fa-solid fa-mobile-alt type-icon-emp"></i>
+                Microcrédito — SMS Automáticos
+                <i class="fa-solid fa-chevron-right summary-arrow"></i>
+              </summary>
+              <div class="group-buttons">
+                <button type="button" class="template-chip" data-key="boas_vindas">
+                  <i class="fa-solid fa-hand-peace"></i> Boas-vindas
+                </button>
+                <button type="button" class="template-chip" data-key="aprovacao">
+                  <i class="fa-solid fa-circle-check"></i> Aprovação
+                </button>
+                <button type="button" class="template-chip" data-key="rejeicao">
+                  <i class="fa-solid fa-ban"></i> Rejeição
+                </button>
+                <button type="button" class="template-chip" data-key="lembrete_3d">
+                  <i class="fa-solid fa-clock"></i> Lembrete 3d
+                </button>
+                <button type="button" class="template-chip" data-key="lembrete_hoje">
+                  <i class="fa-solid fa-bell"></i> Venc. hoje
+                </button>
+                <button type="button" class="template-chip" data-key="atraso_1d">
+                  <i class="fa-solid fa-hourglass-start"></i> Atraso 1d
+                </button>
+                <button type="button" class="template-chip" data-key="atraso_7d">
+                  <i class="fa-solid fa-chart-line"></i> Atraso 7d
+                </button>
+                <button type="button" class="template-chip" data-key="atraso_15d">
+                  <i class="fa-solid fa-triangle-exclamation"></i> Atraso 15d
+                </button>
+                <button type="button" class="template-chip" data-key="aviso_legal_30d">
+                  <i class="fa-solid fa-gavel"></i> Aviso legal 30d
+                </button>
+              </div>
+            </details>
+
+            <details class="template-group" open>
+              <summary>
+                <i class="fa-solid fa-clipboard-list type-icon-emp"></i>
+                Microcrédito — Manuais
+                <i class="fa-solid fa-chevron-right summary-arrow"></i>
+              </summary>
+              <div class="group-buttons">
+                <button type="button" class="template-chip" data-key="atraso_banco">
+                  <i class="fa-solid fa-building-columns"></i> Atraso + Banco
+                </button>
+                <button type="button" class="template-chip" data-key="vencimento_proximo">
+                  <i class="fa-solid fa-calendar-week"></i> Venc. próximo
+                </button>
+                <button type="button" class="template-chip" data-key="urgente">
+                  <i class="fa-solid fa-bullhorn"></i> Urgente
+                </button>
+                <button type="button" class="template-chip" data-key="lembrete">
+                  <i class="fa-solid fa-note-sticky"></i> Lembrete
+                </button>
+                <button type="button" class="template-chip" data-key="agradecimento">
+                  <i class="fa-solid fa-hand-holding-heart"></i> Agradecimento
+                </button>
+              </div>
+            </details>
+
+            <details class="template-group" open>
+              <summary>
+                <i class="fa-solid fa-store type-icon-com"></i>
+                Comerciante — SMS Automáticos
+                <i class="fa-solid fa-chevron-right summary-arrow"></i>
+              </summary>
+              <div class="group-buttons">
+                <button type="button" class="template-chip" data-key="comerciante_registo">
+                  <i class="fa-solid fa-store"></i> Registo
+                </button>
+                <button type="button" class="template-chip" data-key="comerciante_pagamento">
+                  <i class="fa-solid fa-check-double"></i> Confirm. pag.
+                </button>
+                <button type="button" class="template-chip" data-key="comerciante_quitado">
+                  <i class="fa-solid fa-flag-checkered"></i> Quitado
+                </button>
+                <button type="button" class="template-chip" data-key="comerciante_cancelado">
+                  <i class="fa-solid fa-xmark"></i> Cancelamento
+                </button>
+                <button type="button" class="template-chip" data-key="comerciante_falta">
+                  <i class="fa-solid fa-bell"></i> Pag. em falta
+                </button>
+                <button type="button" class="template-chip" data-key="comerciante_atraso_parcela">
+                  <i class="fa-solid fa-triangle-exclamation"></i> Atraso parcela
+                </button>
+                <button type="button" class="template-chip" data-key="comerciante_urgente">
+                  <i class="fa-solid fa-bullhorn"></i> Urgente
+                </button>
+              </div>
+            </details>
+
+            <details class="template-group">
+              <summary>
+                <i class="fa-solid fa-user-shield"></i>
+                Sistema — Credenciais
+                <i class="fa-solid fa-chevron-right summary-arrow"></i>
+              </summary>
+              <div class="group-buttons">
+                <button type="button" class="template-chip" data-key="credenciais">
+                  <i class="fa-solid fa-key"></i> Credenciais
+                </button>
+              </div>
+            </details>
+
+          </div>
+        </div>
+
+        <!-- Mensagem -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fa-solid fa-pen-to-square"></i> Mensagem
+          </label>
+          <textarea name="mensagem" id="sms-msg" class="form-control"
+                    style="height:90px;resize:vertical"
+                    placeholder="Use {nome}, {contrato}, {valor}, {banco}, {conta}, {nib}, {emola}, {data}, {telefone}, {mora}, {totalMora}, {capital}, {parcela}, {periodos_atraso}…"
+                    oninput="updateCharCount()"></textarea>
+          <div class="sms-char-counter" id="char-counter">
+            <i class="fa-solid fa-message" style="font-size:10px"></i>
+            <span id="char-text">0 / 160 caracteres · 0 SMS</span>
+          </div>
+        </div>
+
+        <!-- Tabs destinatários -->
+        <div class="form-label" style="margin-bottom:6px">
+          <i class="fa-solid fa-users"></i> Destinatários
+        </div>
+        <div class="dest-tabs">
+          <button type="button" class="dest-tab active" onclick="switchTab('emp',this)">
+            <i class="fa-solid fa-hand-holding-dollar type-icon-emp"></i>
+            Empréstimos
+            <span class="tab-badge" id="tab-badge-emp">{{ em_atraso|length }}</span>
+          </button>
+          <button type="button" class="dest-tab" onclick="switchTab('com',this)">
+            <i class="fa-solid fa-store type-icon-com"></i>
+            Comerciantes
+            <span class="tab-badge" id="tab-badge-com">{{ comerciantes_em_atraso|length }}</span>
+          </button>
+        </div>
+
+        <!-- Painel Empréstimos -->
+        <div class="dest-panel active" id="panel-emp">
+          <div class="sel-row">
+            <span style="font-size:11.5px;color:var(--text3)">
+              <i class="fa-solid fa-circle-check" style="color:var(--accent)"></i>
+              <span id="sel-count-emp">0</span> de {{ em_atraso|length }} seleccionados
+            </span>
+            <div class="sel-row-btns">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="selAll('emp',true)">
+                <i class="fa-solid fa-check-double"></i> Todos
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="selAll('emp',false)">
+                <i class="fa-solid fa-xmark"></i> Nenhum
+              </button>
+            </div>
+          </div>
+          <input type="text" id="filter-emp" class="filter-input"
+                 placeholder="Filtrar por nome, telefone ou contrato…"
+                 oninput="filterList('emp')">
+          <div id="list-emp" style="max-height:220px;overflow-y:auto;padding-right:2px">
+            {% for e in em_atraso %}
+            <div class="client-item-wrapper-emp"
+                 data-name="{{ e.nome|lower }}"
+                 data-phone="{{ e.telefone|default:'' }}"
+                 data-contrato="{{ e.numero_contrato|lower }}">
+              <label class="cliente-item" id="emp-item-{{ e.pk }}" onclick="toggleItem(this,'emp')">
+                <input type="checkbox" name="dest_emp" value="{{ e.pk }}" checked onchange="updateCounts()">
+                <div style="flex:1;min-width:0">
+                  <div class="cliente-nome">{{ e.nome }}</div>
+                  <div class="cliente-tel">
+                    <i class="fa-solid fa-phone" style="font-size:9px"></i>
+                    {{ e.telefone|default:"Sem telefone" }}
+                    &nbsp;·&nbsp;
+                    <i class="fa-solid fa-file-contract" style="font-size:9px"></i>
+                    {{ e.numero_contrato }}
+                  </div>
+                </div>
+                <div class="cliente-meta">
+                  <span class="mora-badge">
+                    <i class="fa-solid fa-clock"></i> {{ e.dias_atraso }}d
+                  </span>
+                </div>
+              </label>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+              <i class="fa-solid fa-circle-check" style="color:var(--success)"></i>
+              Nenhum empréstimo em atraso. 🎉
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Painel Comerciantes -->
+        <div class="dest-panel" id="panel-com">
+          <div class="sel-row">
+            <span style="font-size:11.5px;color:var(--text3)">
+              <i class="fa-solid fa-circle-check" style="color:var(--gold-d)"></i>
+              <span id="sel-count-com">0</span> de {{ comerciantes_em_atraso|length }} seleccionados
+            </span>
+            <div class="sel-row-btns">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="selAll('com',true)">
+                <i class="fa-solid fa-check-double"></i> Todos
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="selAll('com',false)">
+                <i class="fa-solid fa-xmark"></i> Nenhum
+              </button>
+            </div>
+          </div>
+          <input type="text" id="filter-com" class="filter-input"
+                 placeholder="Filtrar por nome, telefone ou contrato…"
+                 oninput="filterList('com')">
+          <div id="list-com" style="max-height:220px;overflow-y:auto;padding-right:2px">
+            {% for c in comerciantes_em_atraso %}
+            <div class="client-item-wrapper-com"
+                 data-name="{{ c.nome|lower }}"
+                 data-phone="{{ c.telefone|default:'' }}"
+                 data-contrato="{{ c.numero_contrato|lower }}">
+              <label class="cliente-item com-item" id="com-item-{{ c.pk }}" onclick="toggleItem(this,'com')">
+                <input type="checkbox" name="dest_com" value="{{ c.pk }}" checked onchange="updateCounts()">
+                <div style="flex:1;min-width:0">
+                  <div class="cliente-nome">{{ c.nome }}</div>
+                  <div class="cliente-tel">
+                    <i class="fa-solid fa-phone" style="font-size:9px"></i>
+                    {{ c.telefone|default:"Sem telefone" }}
+                    &nbsp;·&nbsp;
+                    <i class="fa-solid fa-file-contract" style="font-size:9px"></i>
+                    {{ c.numero_contrato }}
+                  </div>
+                </div>
+                <div class="cliente-meta">
+                  <span class="com-badge">
+                    <i class="fa-solid fa-store"></i> {{ c.tipo_comercio }}
+                  </span>
+                  <span class="mora-badge">
+                    <i class="fa-solid fa-clock"></i> {{ c.periodos_em_atraso }}p
+                  </span>
+                </div>
+              </label>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+              <i class="fa-solid fa-circle-check" style="color:var(--success)"></i>
+              Nenhum comerciante em atraso. 🎉
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div style="padding:14px 0 4px">
+          <button type="submit" class="btn btn-primary btn-full" onclick="return confirmSend()">
+            <i class="fa-solid fa-paper-plane"></i> Enviar SMS
+          </button>
+        </div>
+        <br>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     HISTÓRICO SMS
+══════════════════════════════════════════════ -->
+<div class="card" style="margin-top:16px">
+  <div class="card-header card-header-flex">
+    <div>
+      <div class="card-title">
+        <i class="fa-solid fa-clock-rotate-left"></i> Histórico de SMS (MozeSMS API)
+      </div>
+      <div class="card-subtitle">
+        <i class="fa-solid fa-list"></i> Mostrando {{ sms_history|length }} mensagens
+      </div>
+    </div>
+    <form method="get" class="hist-filters">
+      <select name="status" class="form-control" style="width:auto">
+        <option value="">
+          <i class="fa-solid fa-filter"></i> Todos status
+        </option>
+        <option value="delivered" {% if current_filters.status == 'delivered' %}selected{% endif %}>Entregues</option>
+        <option value="sent"      {% if current_filters.status == 'sent' %}selected{% endif %}>Enviadas</option>
+        <option value="failed"    {% if current_filters.status == 'failed' %}selected{% endif %}>Falhadas</option>
+      </select>
+      <input type="date" name="start_date" class="form-control" style="width:136px"
+             value="{{ current_filters.start_date }}">
+      <input type="date" name="end_date" class="form-control" style="width:136px"
+             value="{{ current_filters.end_date }}">
+      <select name="limit" class="form-control" style="width:auto">
+        <option value="10"  {% if current_filters.limit == 10  %}selected{% endif %}>10</option>
+        <option value="20"  {% if current_filters.limit == 20  %}selected{% endif %}>20</option>
+        <option value="50"  {% if current_filters.limit == 50  %}selected{% endif %}>50</option>
+        <option value="100" {% if current_filters.limit == 100 %}selected{% endif %}>100</option>
+      </select>
+      <button type="submit" class="btn btn-secondary btn-sm">
+        <i class="fa-solid fa-filter"></i> <span class="btn-label">Filtrar</span>
+      </button>
+    </form>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th><i class="fa-solid fa-calendar-days"></i> Data</th>
+          <th><i class="fa-solid fa-phone"></i> Telefone</th>
+          <th class="table-col-msg"><i class="fa-solid fa-message"></i> Mensagem</th>
+          <th><i class="fa-solid fa-circle-info"></i> Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sms in sms_history %}
+        <tr>
+          <td style="font-size:11px;color:var(--text3);white-space:nowrap">
+            <i class="fa-regular fa-clock" style="font-size:10px"></i>
+            {{ sms.created_at|date:"d/m/Y H:i" }}
+          </td>
+          <td style="font-family:var(--ff-mono);font-size:12px">
+            {{ sms.phone|default:"—" }}
+          </td>
+          <td class="table-col-msg"
+              style="font-size:11px;color:var(--text3);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+              title="{{ sms.message|default:'' }}">
+            {{ sms.message|default:"—"|truncatechars:90 }}
+          </td>
+          <td>
+            <span class="sms-status-tag {% if sms.status == 'delivered' or sms.status == 'enviado' %}delivered{% elif sms.status == 'sent' %}sent{% else %}failed{% endif %}">
+              {% if sms.status == 'delivered' or sms.status == 'enviado' %}
+                <i class="fa-solid fa-circle-check"></i> Entregue
+              {% elif sms.status == 'sent' %}
+                <i class="fa-solid fa-paper-plane"></i> Enviado
+              {% else %}
+                <i class="fa-solid fa-circle-xmark"></i> Falhou
+              {% endif %}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="text-align:center;padding:40px;color:var(--text3)">
+            <i class="fa-solid fa-inbox" style="font-size:28px;margin-bottom:12px;display:block"></i>
+            Nenhuma mensagem encontrada na API.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  DADOS DO BANCO
+// ══════════════════════════════════════════════
+const banco_nome    = "{{ banco_nome|escapejs }}";
+const banco_conta   = "{{ banco_conta|escapejs }}";
+const banco_nib     = "{{ banco_nib|escapejs }}";
+const emola_numero  = "{{ banco.emola_numero|default:''|escapejs }}";
+const emola_titular = "{{ banco.emola_titular|default:''|escapejs }}";
+const telefone_osm  = "{{ telefone_osm|escapejs }}";
+
+// ══════════════════════════════════════════════
+//  TEMPLATES
+// ══════════════════════════════════════════════
+const TPLS = {
+  boas_vindas:     `Bem-vindo(a) à OSM Microcrédito, {nome}! Contrato {contrato} de MT {valor} registado. Pagamentos: {banco} | Conta: {conta} | NIB: {nib} | e-Mola: {emola}. Prazo: {data}.`,
+  aprovacao:       `OSM Microcrédito — Olá {nome}, o seu pedido ({contrato}) de {valor} foi APROVADO. Deposite em: {banco} | Conta: {conta} | NIB: {nib}. Obrigado!`,
+  rejeicao:        `OSM Microcrédito — Olá {nome}, o pedido {contrato} foi rejeitado. Motivo: {motivo}. Contacte-nos para mais informações.`,
+  lembrete_3d:     `{nome}, a parcela do contrato {contrato} (MT {valor}) vence em 3 dias ({data}). Pague: {banco} | Conta: {conta} | NIB: {nib}. OSM Microcrédito.`,
+  lembrete_hoje:   `{nome}, HOJE é o dia de pagamento do contrato {contrato} (MT {valor}). Deposite: {banco} | Conta: {conta} | NIB: {nib}. OSM Microcrédito.`,
+  atraso_1d:       `{nome}, a parcela do contrato {contrato} (MT {valor}) está em atraso. Regularize urgentemente: {banco} | Conta: {conta} | NIB: {nib}. Mora 2%/dia. Tel: {telefone}`,
+  atraso_7d:       `AVISO — {nome}: contrato {contrato} com 7 dias de atraso. Mora: MT {mora}. Total: MT {totalMora}. Regularize: {banco} | Conta: {conta}. Tel: {telefone}`,
+  atraso_15d:      `URGENTE — {nome}: contrato {contrato} com 15 dias de atraso. Mora: MT {mora}. Total: MT {totalMora}. Contacte-nos: {telefone}. OSM Microcrédito.`,
+  aviso_legal_30d: `AVISO LEGAL — {nome}: contrato {contrato} com 30 dias de atraso. Mora: MT {mora}. Total: MT {totalMora}. Sem regularização, serão tomadas medidas judiciais. Tel: {telefone}`,
+  atraso_banco:       `Prezado(a) {nome}, a parcela do contrato {contrato} (MT {valor}) está em atraso. Deposite: {banco} | Conta: {conta} | NIB: {nib}. Prazo: {data}. Tel: {telefone}`,
+  vencimento_proximo: `{nome}, a parcela do contrato {contrato} (MT {valor}) vence em {data}. Deposite: {banco} | Conta: {conta} | NIB: {nib}. OSM Microcrédito.`,
+  urgente:            `URGENTE — {nome}: contrato {contrato} com parcela(s) em falta (MT {valor}). Regularize até {data}. Banco: {banco} | Conta: {conta}. Tel: {telefone}`,
+  lembrete:           `{nome}, lembre-se: parcela do contrato {contrato} (MT {valor}) vence em {data}. Deposite: {banco} | Conta: {conta} | NIB: {nib}.`,
+  agradecimento:      `Obrigado(a) {nome}! Pagamento do contrato {contrato} recebido. OSM Microcrédito agradece a sua pontualidade.`,
+  comerciante_registo:       `Bem-vindo(a) à OSM Microcrédito, {nome}! Contrato {contrato} de MT {capital} registado. Parcela: MT {parcela}/dia por 30 dias. Deposite: {banco} | Conta: {conta} | NIB: {nib} | e-Mola: {emola}.`,
+  comerciante_pagamento:     `OSM Microcrédito — {nome}, pagamento confirmado! Parcela {diaPagamento}/30 do contrato {contrato} (MT {parcela}). Total pago: MT {totalPago}. Faltam {diasRestantes} dia(s). Obrigado!`,
+  comerciante_quitado:       `OSM Microcrédito — Parabéns, {nome}! Contrato {contrato} QUITADO na totalidade. Obrigado pela pontualidade!`,
+  comerciante_cancelado:     `OSM Microcrédito — {nome}, o pagamento do dia {diaPagamento}/30 ({data}) do contrato {contrato} foi ANULADO. Parcela MT {parcela} em aberto. Contacte a OSM. Contrato: {contrato}.`,
+  comerciante_falta:         `OSM Microcrédito — {nome}, o pagamento do contrato {contrato} não foi registado hoje. Parcela em falta: MT {parcela}. Deposite: {banco} | Conta: {conta} | NIB: {nib}. Tel: {telefone}`,
+  comerciante_atraso_parcela:`AVISO — {nome}: contrato {contrato} com {periodos_atraso} parcela(s) em atraso. Total em atraso: MT {mora}. Regularize urgentemente: {banco} | Conta: {conta} | e-Mola: {emola}. Tel: {telefone}`,
+  comerciante_urgente:       `URGENTE — {nome}: contrato {contrato} com pagamentos em falta. Risco de incumprimento. Regularize imediatamente: {banco} | Conta: {conta}. Tel: {telefone}`,
+  credenciais: `OSM Microcrédito — Bem-vindo(a), {nome}! Credenciais criadas. Email: {email} | Password: {password}. Guarde em local seguro. OSM Microcrédito.`,
+};
+
+function setTpl(key, button) {
+  var ta = document.getElementById('sms-msg');
+  if (!ta || !TPLS[key]) return;
+  var tpl = TPLS[key]
+    .replace(/{banco}/g,    banco_nome)
+    .replace(/{conta}/g,    banco_conta)
+    .replace(/{nib}/g,      banco_nib)
+    .replace(/{emola}/g,    emola_numero ? emola_numero + ' — ' + emola_titular : 'não disponível')
+    .replace(/{telefone}/g, telefone_osm);
+  ta.value = tpl;
+  updateCharCount();
+  document.querySelectorAll('.template-chip').forEach(function(c){ c.classList.remove('active'); });
+  button.classList.add('active');
+}
+
+function switchTab(type, btn) {
+  document.querySelectorAll('.dest-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.dest-panel').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('panel-' + type).classList.add('active');
+}
+
+function updateCounts() {
+  var empCount = document.querySelectorAll('input[name="dest_emp"]:checked').length;
+  var comCount = document.querySelectorAll('input[name="dest_com"]:checked').length;
+  var total    = empCount + comCount;
+  var elEmp    = document.getElementById('sel-count-emp');
+  var elCom    = document.getElementById('sel-count-com');
+  var elTotal  = document.getElementById('sel-count-total');
+  if (elEmp)   elEmp.textContent   = empCount;
+  if (elCom)   elCom.textContent   = comCount;
+  if (elTotal) elTotal.textContent = total + ' sel.';
+}
+
+function selAll(type, val) {
+  var wrappers = document.querySelectorAll('.client-item-wrapper-' + type + ':not([style*="display: none"])');
+  wrappers.forEach(function(w) {
+    var cb  = w.querySelector('input[name="dest_' + type + '"]');
+    var lbl = w.querySelector('.cliente-item');
+    if (!cb) return;
+    cb.checked = val;
+    if (lbl) {
+      lbl.classList.toggle('selected',     type === 'emp' && val);
+      lbl.classList.toggle('com-selected', type === 'com' && val);
+    }
+  });
+  updateCounts();
+}
+
+function toggleItem(lbl, type) {
+  var cb = lbl.querySelector('input[type="checkbox"]');
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  if (type === 'emp') {
+    lbl.classList.toggle('selected', cb.checked);
+  } else {
+    lbl.classList.toggle('com-selected', cb.checked);
+  }
+  updateCounts();
+}
+
+function filterList(type) {
+  var filter   = document.getElementById('filter-' + type).value.toLowerCase();
+  var wrappers = document.querySelectorAll('.client-item-wrapper-' + type);
+  wrappers.forEach(function(w) {
+    var name     = (w.getAttribute('data-name')     || '');
+    var phone    = (w.getAttribute('data-phone')    || '');
+    var contrato = (w.getAttribute('data-contrato') || '');
+    var visible  = name.includes(filter) || phone.includes(filter) || contrato.includes(filter);
+    w.style.display = visible ? '' : 'none';
+    if (!visible) {
+      var cb  = w.querySelector('input[name="dest_' + type + '"]');
+      var lbl = w.querySelector('.cliente-item');
+      if (cb && cb.checked) {
+        cb.checked = false;
+        if (lbl) { lbl.classList.remove('selected'); lbl.classList.remove('com-selected'); }
+      }
+    }
+  });
+  updateCounts();
+}
+
+function updateCharCount() {
+  var ta  = document.getElementById('sms-msg');
+  if (!ta) return;
+  var len = ta.value.length;
+  var sms = Math.ceil(len / 160) || 1;
+  var el  = document.getElementById('char-counter');
+  var txt = document.getElementById('char-text');
+  if (txt) txt.textContent = len + ' / 160 caracteres · ' + sms + ' SMS';
+  if (el)  el.className = 'sms-char-counter' + (len > 320 ? ' over' : len > 160 ? ' warn' : '');
+}
+
+function toggleBankEdit() {
+  var v = document.getElementById('bank-view');
+  var e = document.getElementById('bank-edit');
+  if (v.style.display !== 'none') { v.style.display = 'none'; e.style.display = 'block'; }
+  else                            { v.style.display = '';     e.style.display = 'none'; }
+}
+
+function confirmSend() {
+  var empSel = document.querySelectorAll('input[name="dest_emp"]:checked').length;
+  var comSel = document.querySelectorAll('input[name="dest_com"]:checked').length;
+  var total  = empSel + comSel;
+  if (total === 0) { alert('Seleccione pelo menos um destinatário.'); return false; }
+  var msg = document.getElementById('sms-msg').value.trim();
+  if (!msg) { alert('Escreva a mensagem antes de enviar.'); return false; }
+  var desc = [];
+  if (empSel > 0) desc.push(empSel + ' empréstimo(s)');
+  if (comSel > 0) desc.push(comSel + ' comerciante(s)');
+  return confirm('Enviar SMS para ' + desc.join(' e ') + '?');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.template-chip').forEach(function(btn) {
+    var key = btn.getAttribute('data-key');
+    if (key) btn.addEventListener('click', function() { setTpl(key, this); });
+  });
+  document.querySelectorAll('.cliente-item input[type="checkbox"]:checked').forEach(function(cb) {
+    var lbl  = cb.closest('.cliente-item');
+    var type = cb.name === 'dest_com' ? 'com' : 'emp';
+    if (lbl) lbl.classList.add(type === 'com' ? 'com-selected' : 'selected');
+  });
+  updateCounts();
+  updateCharCount();
+
+  // ── Tabs Email ──────────────────────────────────────────
+  document.querySelectorAll('.email-tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.email-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.email-tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      this.classList.add('active');
+      var target = this.getAttribute('data-tab');
+      var panel = document.getElementById(target);
+      if (panel) panel.classList.add('active');
+    });
+  });
+});
+</script>
+
+<!-- ══════════════════════════════════════════════
+     SECÇÃO EMAIL — Cobrança por Email
+══════════════════════════════════════════════ -->
+<div style="margin-top:24px">
+  <div class="card">
+    <div class="card-header card-header-flex">
+      <div>
+        <div class="card-title"><i class="fa-solid fa-envelope-open-text"></i> Cobrança por Email</div>
+        <div class="card-sub">Envio automático com template profissional para clientes com email registado</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+        {% if em_atraso %}
+        <form method="post" action="{% url 'email_cobranca_bulk' %}" style="display:inline"
+              onsubmit="return confirm('Enviar email de cobrança a todos os clientes em atraso?')">
+          {% csrf_token %}
+          <input type="hidden" name="tipo_email" value="atraso">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span class="btn-label">Enviar a Todos ({{ em_atraso|length }})</span>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card-body">
+
+      <!-- Tabs -->
+      <div class="dest-tabs" style="margin-bottom:20px">
+        <button class="dest-tab email-tab-btn active" data-tab="email-compose">
+          <i class="fa-solid fa-pen-to-square"></i> Compor &amp; Enviar
+          <span class="tab-badge">{{ em_atraso|length }}</span>
+        </button>
+        <button class="dest-tab email-tab-btn" data-tab="email-templates">
+          <i class="fa-solid fa-swatchbook"></i> Tipos de Email
+        </button>
+      </div>
+
+      <!-- Panel: Compor -->
+      <div id="email-compose" class="email-tab-panel" style="display:block">
+        <form method="post" action="{% url 'email_cobranca_bulk' %}">
+          {% csrf_token %}
+
+          <!-- Selector tipo -->
+          <div style="margin-bottom:18px">
+            <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">
+              <i class="fa-solid fa-tag"></i> Tipo de Email
+            </label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              {% for val, label, icon, color in email_tipos %}
+              <label style="cursor:pointer">
+                <input type="radio" name="tipo_email" value="{{ val }}"
+                       {% if forloop.first %}checked{% endif %}
+                       style="display:none" class="email-tipo-radio">
+                <span class="template-chip email-tipo-chip" data-val="{{ val }}"
+                      style="border-color:{{ color }};color:{{ color }}">
+                  <i class="{{ icon }}"></i> {{ label }}
+                </span>
+              </label>
+              {% empty %}
+              <label><input type="radio" name="tipo_email" value="atraso" checked style="display:none">
+                <span class="template-chip" style="border-color:#e65100;color:#e65100"><i class="fa-solid fa-exclamation-triangle"></i> Atraso</span>
+              </label>
+              <label><input type="radio" name="tipo_email" value="urgente" style="display:none">
+                <span class="template-chip" style="border-color:#c62828;color:#c62828"><i class="fa-solid fa-fire"></i> Urgente</span>
+              </label>
+              <label><input type="radio" name="tipo_email" value="juridico" style="display:none">
+                <span class="template-chip" style="border-color:#4a148c;color:#4a148c"><i class="fa-solid fa-scale-balanced"></i> Jurídico</span>
+              </label>
+              <label><input type="radio" name="tipo_email" value="lembrete" style="display:none">
+                <span class="template-chip" style="border-color:#0277bd;color:#0277bd"><i class="fa-solid fa-bell"></i> Lembrete</span>
+              </label>
+              <label><input type="radio" name="tipo_email" value="quitacao" style="display:none">
+                <span class="template-chip" style="border-color:#2e7d32;color:#2e7d32"><i class="fa-solid fa-trophy"></i> Quitação</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Lista de destinatários -->
+          <div style="margin-bottom:18px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <label style="font-size:12px;font-weight:700;color:var(--text2)">
+                <i class="fa-solid fa-users"></i> Destinatários em Atraso
+              </label>
+              <div style="display:flex;gap:6px">
+                <button type="button" onclick="emailSelectAll(true)"
+                        style="font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid var(--accent);color:var(--accent);background:transparent;cursor:pointer">
+                  Todos
+                </button>
+                <button type="button" onclick="emailSelectAll(false)"
+                        style="font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid var(--border);color:var(--text3);background:transparent;cursor:pointer">
+                  Nenhum
+                </button>
+              </div>
+            </div>
+            <input type="text" id="email-filter" placeholder="Filtrar por nome..." class="filter-input"
+                   oninput="filterEmailList(this.value)">
+            <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:6px" id="email-list">
+              {% for emp in em_atraso %}
+              {% if emp.cliente and emp.cliente.email %}
+              <label class="cliente-item email-item" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;border:1px solid transparent;transition:all .15s">
+                <input type="checkbox" name="dest_emp" value="{{ emp.pk }}" checked
+                       onchange="this.closest('.email-item').classList.toggle('selected', this.checked)"
+                       style="accent-color:var(--accent)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:600;color:var(--text)">{{ emp.nome }}</div>
+                  <div style="font-size:11px;color:var(--text3)">
+                    {{ emp.numero_contrato }} · {{ emp.cliente.email }} ·
+                    <span style="color:var(--danger);font-weight:600">{{ emp.dias_atraso }}d atraso</span>
+                  </div>
+                </div>
+                <div style="font-size:12px;font-weight:700;color:var(--danger);white-space:nowrap">
+                  MT {{ emp.total_com_multa|floatformat:0 }}
+                </div>
+              </label>
+              {% else %}
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;opacity:.45;background:var(--surface2)">
+                <i class="fa-solid fa-envelope-circle-check" style="color:var(--text3);font-size:14px"></i>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:600;color:var(--text3)">{{ emp.nome }}</div>
+                  <div style="font-size:11px;color:var(--text3)">{{ emp.numero_contrato }} · <em>sem email</em></div>
+                </div>
+              </div>
+              {% endif %}
+              {% empty %}
+              <div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">
+                <i class="fa-solid fa-circle-check" style="font-size:24px;color:var(--success);display:block;margin-bottom:8px"></i>
+                Nenhum empréstimo em atraso com email.
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full"
+                  onclick="return confirm('Enviar email de cobrança aos destinatários seleccionados?')">
+            <i class="fa-solid fa-paper-plane"></i> Enviar Emails de Cobrança
+          </button>
+        </form>
+      </div>
+
+      <!-- Panel: Tipos -->
+      <div id="email-templates" class="email-tab-panel" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          {% for tipo, titulo, descricao, icon, cor in email_tipo_descricoes %}
+          <div style="border:1px solid {{ cor }}22;border-radius:12px;padding:14px;background:{{ cor }}08">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:8px;background:{{ cor }}18;display:flex;align-items:center;justify-content:center">
+                <i class="{{ icon }}" style="color:{{ cor }};font-size:15px"></i>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:{{ cor }}">{{ titulo }}</div>
+            </div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5">{{ descricao }}</div>
+            <div style="margin-top:10px">
+              <form method="post" action="{% url 'email_cobranca_bulk' %}" style="display:inline"
+                    onsubmit="return confirm('Enviar email tipo {{ titulo }} a todos em atraso?')">
+                {% csrf_token %}
+                <input type="hidden" name="tipo_email" value="{{ tipo }}">
+                <button type="submit" class="btn btn-sm"
+                        style="background:{{ cor }}18;color:{{ cor }};border:1px solid {{ cor }}44;font-size:11px;padding:4px 12px">
+                  <i class="fa-solid fa-paper-plane"></i> Enviar a Todos
+                </button>
+              </form>
+            </div>
+          </div>
+          {% empty %}
+          <!-- Fallback cards se contexto não tiver email_tipo_descricoes -->
+          <div style="border:1px solid #e6510022;border-radius:12px;padding:14px;background:#e6510008">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:8px;background:#e6510018;display:flex;align-items:center;justify-content:center">
+                <i class="fa-solid fa-exclamation-triangle" style="color:#e65100;font-size:15px"></i>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:#e65100">Aviso de Atraso</div>
+            </div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5">Notifica o cliente da parcela em atraso, indica valor e dados de pagamento.</div>
+          </div>
+          <div style="border:1px solid #c6282822;border-radius:12px;padding:14px;background:#c6282808">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:8px;background:#c6282818;display:flex;align-items:center;justify-content:center">
+                <i class="fa-solid fa-fire" style="color:#c62828;font-size:15px"></i>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:#c62828">Urgente</div>
+            </div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5">Para casos de incumprimento grave, exige acção imediata.</div>
+          </div>
+          <div style="border:1px solid #4a148c22;border-radius:12px;padding:14px;background:#4a148c08">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:8px;background:#4a148c18;display:flex;align-items:center;justify-content:center">
+                <i class="fa-solid fa-scale-balanced" style="color:#4a148c;font-size:15px"></i>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:#4a148c">Notificação Jurídica</div>
+            </div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5">Aviso formal de envio para tribunal se não regularizar em 48h.</div>
+          </div>
+          <div style="border:1px solid #0277bd22;border-radius:12px;padding:14px;background:#0277bd08">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:8px;background:#0277bd18;display:flex;align-items:center;justify-content:center">
+                <i class="fa-solid fa-bell" style="color:#0277bd;font-size:15px"></i>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:#0277bd">Lembrete</div>
+            </div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5">Lembrete amigável de vencimento próximo para prevenir atraso.</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function emailSelectAll(sel) {
+  document.querySelectorAll('#email-list input[type="checkbox"]').forEach(function(cb) {
+    cb.checked = sel;
+    var item = cb.closest('.email-item');
+    if (item) item.classList.toggle('selected', sel);
+  });
+}
+function filterEmailList(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#email-list .email-item, #email-list > div').forEach(function(el) {
+    var txt = el.textContent.toLowerCase();
+    el.style.display = txt.includes(q) ? '' : 'none';
+  });
+}
+// Estilo visual para radio buttons de tipo email
+document.querySelectorAll('.email-tipo-radio').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.email-tipo-chip').forEach(function(chip) {
+      chip.classList.remove('active');
+    });
+    if (this.checked) {
+      var chip = document.querySelector('.email-tipo-chip[data-val="' + this.value + '"]');
+      if (chip) chip.classList.add('active');
+    }
+  });
+});
+// Activar o primeiro por defeito
+var firstRadio = document.querySelector('.email-tipo-radio:checked');
+if (firstRadio) {
+  var chip = document.querySelector('.email-tipo-chip[data-val="' + firstRadio.value + '"]');
+  if (chip) chip.classList.add('active');
+}
+</script>
+{% endblock %}

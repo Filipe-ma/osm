@@ -1,0 +1,93 @@
+{% load humanize %}
+{% if creditos_activos or creditos_quitados %}
+  {% if creditos_activos %}
+    <h4 style="font-size: 12px; margin-bottom: 10px; color: var(--accent);">Em andamento</h4>
+    {% for cred in creditos_activos %}
+      <div class="credito-item">
+        <div class="credito-header">
+          <div>
+            <span class="credito-valor">MT {{ cred.valor|floatformat:2 }}</span>
+            <div class="credito-detail">
+              <span><i class="fa-solid fa-percent"></i> Juros: {{ cred.taxa_juros }}%</span>
+              <span><i class="fa-solid fa-clock"></i> Multa: {{ cred.taxa_multa }}%/dia</span>
+              <span><i class="fa-regular fa-calendar"></i> Vence: {{ cred.vencimento|date:"d/m/Y" }}</span>
+            </div>
+          </div>
+          <div class="credito-status">
+            {% if cred.em_incumprimento %}
+              <span class="badge badge-danger"><i class="fa-solid fa-scale-balanced"></i> Tribunal</span>
+            {% elif cred.esta_vencido %}
+              <span class="badge badge-warn"><i class="fa-solid fa-triangle-exclamation"></i> Vencido</span>
+            {% else %}
+              <span class="badge badge-info"><i class="fa-solid fa-hourglass-half"></i> Em andamento</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Barra de progresso — sempre visível -->
+        <div class="progress-small" style="margin: 10px 0 4px;">
+          <div class="progress-fill" style="width: {{ cred.percentual_pago }}%; background: {% if cred.em_incumprimento %}var(--danger){% elif cred.esta_vencido %}var(--warn){% else %}var(--success){% endif %};"></div>
+        </div>
+        <div class="credito-detail" style="margin-bottom: 6px;">
+          <span>{{ cred.percentual_pago }}% pago</span>
+          {% if cred.is_parcial %}
+          <span>Pago: MT {{ cred.total_pago_parcial|floatformat:2 }}</span>
+          <span>Restante: MT {{ cred.saldo_restante|floatformat:2 }}</span>
+          {% endif %}
+        </div>
+
+        <div class="credito-detail" style="justify-content: space-between;">
+          <span><strong>Saldo:</strong> MT {{ cred.saldo_devedor_base|floatformat:2 }}</span>
+          {% if cred.mora_composta > 0 %}
+          <span style="color: var(--danger);"><strong>Multa:</strong> MT {{ cred.mora_composta|floatformat:2 }}</span>
+          {% endif %}
+        </div>
+
+        <a href="{% url 'comerciante_detalhe' cred.comerciante_id %}?credito={{ cred.pk }}" class="btn btn-secondary btn-sm" style="margin-top: 10px; width: 100%;">
+          <i class="fa-solid fa-eye"></i> Ver detalhes deste crédito
+        </a>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if creditos_quitados %}
+    <h4 style="font-size: 12px; margin-bottom: 10px; margin-top: 20px; color: var(--success);">Créditos Quitados</h4>
+    {% for cred in creditos_quitados %}
+      <div class="credito-item" style="opacity: 0.8; background: var(--surface);">
+        <div class="credito-header">
+          <div>
+            <span class="credito-valor">MT {{ cred.valor|floatformat:2 }}</span>
+            <div class="credito-detail">
+              <span>Juros pagos: MT {{ cred.juros_valor|floatformat:2 }}</span>
+              <span>Multa: MT {{ cred.multa_valor|floatformat:2 }}</span>
+            </div>
+          </div>
+          <div><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Quitado</span></div>
+        </div>
+        <!-- Barra 100% verde -->
+        <div class="progress-small" style="margin: 8px 0 4px;">
+          <div class="progress-fill" style="width: 100%; background: var(--success);"></div>
+        </div>
+        <div class="credito-detail">
+          <span>Data pagamento: {{ cred.data_pagamento|date:"d/m/Y"|default:"—" }}</span>
+        </div>
+        <a href="{% url 'comerciante_detalhe' cred.comerciante_id %}?credito={{ cred.pk }}" class="btn btn-secondary btn-sm" style="margin-top: 8px; width: 100%;">
+          <i class="fa-solid fa-eye"></i> Ver detalhes
+        </a>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% else %}
+  <div class="text-muted" style="text-align: center; padding: 20px;">Nenhum crédito associado a este comerciante.</div>
+{% endif %}
+
+<style>
+.credito-item { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; background: var(--surface2); transition: all 0.2s ease; }
+.credito-item:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+.credito-header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.credito-valor { font-weight: 800; font-family: var(--ff-mono); font-size: 16px; }
+.credito-status { font-size: 11px; font-weight: 700; }
+.credito-detail { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--text3); margin-top: 6px; }
+.progress-small { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+</style>

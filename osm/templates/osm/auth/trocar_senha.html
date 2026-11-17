@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configurar Credenciais — OSM</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0a1628;--blue:#1565c0;--gold:#c9a84c;--gray:#64748b;--light:#f1f5f9;--white:#fff;--cream:#f8f4ed;--ff:'Plus Jakarta Sans',system-ui,sans-serif;--ffd:'Playfair Display',serif;}
+[data-theme=dark]{--white:#1e293b;--light:#0f172a;--cream:#0f172a;--gray:#94a3b8;--ink:#e2e8f0;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--ff);background:var(--cream);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.wrap{background:var(--white);border-radius:24px;padding:48px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(10,22,40,.12);border:1px solid rgba(201,168,76,.1);}
+.icon{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#0a1628,#1e3a5f);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-family:var(--ffd);font-size:20px;color:var(--gold);}
+h1{font-family:var(--ffd);font-size:24px;text-align:center;color:var(--ink);margin-bottom:8px;}
+.sub{font-size:14px;color:var(--gray);text-align:center;margin-bottom:28px;line-height:1.6;}
+.notice{background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:12px 16px;font-size:12px;color:#7c5f00;margin-bottom:24px;line-height:1.6;}
+[data-theme=dark] .notice{color:var(--gold);}
+.current{background:rgba(21,101,192,.06);border:1px solid rgba(21,101,192,.15);border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:24px;display:flex;align-items:center;gap:10px;}
+.current-label{font-size:11px;color:var(--gray);}
+.current-val{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--blue);}
+.form-group{margin-bottom:18px;}
+.form-group label{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--gray);margin-bottom:7px;}
+.form-group input{width:100%;padding:12px 16px;border:1.5px solid rgba(10,22,40,.1);border-radius:10px;font-size:14px;color:var(--ink);font-family:var(--ff);background:var(--light);outline:none;transition:border-color .2s,box-shadow .2s;}
+.form-group input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(21,101,192,.1);background:var(--white);}
+[data-theme=dark] .form-group input{background:rgba(255,255,255,.06);color:#e2e8f0;border-color:rgba(255,255,255,.1);}
+.strength{height:4px;border-radius:2px;background:rgba(10,22,40,.08);margin-top:8px;overflow:hidden;}
+.strength-fill{height:100%;border-radius:2px;width:0;transition:width .3s,background .3s;}
+.strength-label{font-size:11px;color:var(--gray);margin-top:5px;}
+.btn{width:100%;padding:14px;background:var(--ink);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;font-family:var(--ff);cursor:pointer;transition:background .2s;margin-top:4px;}
+.btn:hover{background:var(--blue);}
+.msgs .err{background:rgba(198,40,40,.07);border:1px solid rgba(198,40,40,.2);border-radius:9px;padding:9px 14px;color:#b71c1c;font-size:13px;margin-bottom:10px;}
+.msgs .ok{background:rgba(46,125,50,.07);border:1px solid rgba(46,125,50,.2);border-radius:9px;padding:9px 14px;color:#1b5e20;font-size:13px;margin-bottom:10px;}
+.tbtn{position:fixed;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--ink);color:var(--gold);border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+</style>
+</head>
+<body>
+<button class="tbtn" id="tbtn" onclick="toggleTheme()">🌙</button>
+<div class="wrap">
+  <div class="icon">OSM</div>
+  <h1>Configure as Suas Credenciais</h1>
+  <p class="sub">É a sua primeira sessão. Por segurança, deve escolher um novo username e uma nova password pessoal antes de continuar.</p>
+
+  <div class="notice">
+    🔑 As suas credenciais iniciais foram entregues pela administração. Após esta configuração, apenas você terá acesso à sua conta.
+  </div>
+
+  <div class="current">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M16.24 7.76a6 6 0 0 1 0 8.48M4.93 19.07a10 10 0 0 1 0-14.14M7.76 16.24a6 6 0 0 1 0-8.48"/></svg>
+    <div>
+      <div class="current-label">Username actual</div>
+      <div class="current-val">{{ username_atual }}</div>
+    </div>
+  </div>
+
+  <div class="msgs">
+    {% for msg in messages %}
+      <div class="{% if msg.tags == 'error' %}err{% else %}ok{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Novo Username *</label>
+      <input type="text" name="novo_username" placeholder="escolha um username único" minlength="4" required autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Nova Password *</label>
+      <input type="password" name="nova_senha" id="nova_senha" placeholder="mínimo 6 caracteres" minlength="6" required oninput="checkStrength(this.value)" autocomplete="new-password">
+      <div class="strength"><div class="strength-fill" id="sfill"></div></div>
+      <div class="strength-label" id="slabel">Escreva uma password</div>
+    </div>
+    <div class="form-group">
+      <label>Confirmar Password *</label>
+      <input type="password" name="confirmar_senha" placeholder="repita a nova password" required autocomplete="new-password">
+    </div>
+    <button type="submit" class="btn"><i class="fa-solid fa-check"></i> Confirmar e Entrar</button>
+  </form>
+</div>
+<script>
+function checkStrength(v) {
+  const f = document.getElementById('sfill'), l = document.getElementById('slabel');
+  let s = 0;
+  if(v.length >= 6) s++;
+  if(v.length >= 10) s++;
+  if(/[A-Z]/.test(v)) s++;
+  if(/[0-9]/.test(v)) s++;
+  if(/[^A-Za-z0-9]/.test(v)) s++;
+  const pct = [0,20,40,65,85,100][s];
+  const clr = ['#e53935','#f57c00','#fbc02d','#43a047','#1565c0'][Math.max(0,s-1)];
+  const lbl = ['','Muito fraca','Fraca','Razoável','Boa','Excelente'][s];
+  f.style.width = pct+'%'; f.style.background = clr;
+  l.textContent = lbl || 'Escreva uma password';
+}
+function toggleTheme(){const h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('tbtn').textContent=d?'🌙':'☀️';localStorage.setItem('osm-theme',d?'light':'dark');}
+const t=localStorage.getItem('osm-theme')||'light';document.documentElement.setAttribute('data-theme',t);document.getElementById('tbtn').textContent=t==='dark'?'☀️':'🌙';
+</script>
+</body>
+</html>

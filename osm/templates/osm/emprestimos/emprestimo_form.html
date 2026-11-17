@@ -1,0 +1,256 @@
+{% extends "osm/base.html" %}
+{% block title %}{% if editar %}Editar{% else %}Novo{% endif %} Empréstimo — OSM{% endblock %}
+{% block nav_emprestimos %}active{% endblock %}
+{% block topbar_title %}{% if editar %}Editar Empréstimo{% else %}Novo Empréstimo{% endif %}{% endblock %}
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+<a href="{% url 'emprestimos' %}" class="btn btn-secondary btn-sm">← Voltar</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+<div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
+  <div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title"><i class="fa-solid fa-user"></i> Dados Pessoais</div></div></div>
+      <div class="card-body">
+        <div class="form-grid-2">
+          <div class="form-group" style="grid-column:span 2">
+            <label class="form-label">Nome Completo *</label>
+            <input name="nome" class="form-control" placeholder="Nome completo do cliente" value="{{ emp.nome|default:'' }}" required>
+          </div>
+          <div class="form-group"><label class="form-label">NUIT</label><input name="nuit" class="form-control" value="{{ emp.nuit|default:'' }}"></div>
+          <div class="form-group"><label class="form-label">Nº BI</label><input name="bi" class="form-control" value="{{ emp.bi|default:'' }}"></div>
+          <div class="form-group"><label class="form-label">Data Emissão BI</label><input name="data_emissao_bi" class="form-control" type="date" value="{{ emp.data_emissao_bi|date:'Y-m-d'|default:'' }}"></div>
+          <div class="form-group"><label class="form-label">Local Emissão BI</label><input name="local_emissao_bi" class="form-control" value="{{ emp.local_emissao_bi|default:'Chimoio' }}"></div>
+          <div class="form-group"><label class="form-label">Telefone</label><input name="telefone" class="form-control" type="tel" placeholder="+258 84 000 0000" value="{{ emp.telefone|default:'' }}"></div>
+          <div class="form-group">
+            <label class="form-label">Estado Civil</label>
+            <select name="estado_civil" class="form-control">
+              <option value="Solteiro(a)" {% if emp.estado_civil == "Solteiro(a)" %}selected{% endif %}>Solteiro(a)</option>
+              <option value="Casado(a)" {% if emp.estado_civil == "Casado(a)" %}selected{% endif %}>Casado(a)</option>
+              <option value="Divorciado(a)" {% if emp.estado_civil == "Divorciado(a)" %}selected{% endif %}>Divorciado(a)</option>
+              <option value="Viúvo(a)" {% if emp.estado_civil == "Viúvo(a)" %}selected{% endif %}>Viúvo(a)</option>
+              <option value="União de Facto" {% if emp.estado_civil == "União de Facto" %}selected{% endif %}>União de Facto</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Bairro</label><input name="bairro" class="form-control" value="{{ emp.bairro|default:'' }}"></div>
+          <div class="form-group"><label class="form-label">Distrito</label><input name="distrito" class="form-control" value="{{ emp.distrito|default:'Chimoio' }}"></div>
+          <div class="form-group"><label class="form-label">Nome do Pai</label><input name="nome_pai" class="form-control" value="{{ emp.nome_pai|default:'' }}"></div>
+          <div class="form-group"><label class="form-label">Nome da Mãe</label><input name="nome_mae" class="form-control" value="{{ emp.nome_mae|default:'' }}"></div>
+          <div class="form-group"><label class="form-label">Empregador / Negócio</label><input name="empregador" class="form-control" value="{{ emp.empregador|default:'' }}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div><div class="card-title"><i class="fa-solid fa-coins"></i> Condições do Empréstimo</div></div></div>
+      <div class="card-body">
+        <div style="background:var(--accent-l);border:1px solid rgba(21,101,192,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--accent);margin-bottom:20px;line-height:1.7">
+          <i class="fa-solid fa-info-circle"></i> <strong>Prazo fixo: 1 mês (30 dias)</strong> a partir da data de início.
+          Após vencimento: multa de <strong>{{ banco.taxa_multa_padrao }}%/dia</strong> durante <strong>{{ banco.prazo_multa_dias }} dias</strong>.
+          {% if request.user.eh_superadmin %}<br><span style="font-size:11px;opacity:.8">Como superadmin pode ajustar as taxas neste contrato.</span>{% endif %}
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Sector</label>
+            <select name="sector" class="form-control">
+              <option value="Comércio" {% if emp.sector == "Comércio" or not emp.sector %}selected{% endif %}>Comércio</option>
+              <option value="Serviços" {% if emp.sector == "Serviços" %}selected{% endif %}>Serviços</option>
+              <option value="Produção" {% if emp.sector == "Produção" %}selected{% endif %}>Produção</option>
+              <option value="Agricultura" {% if emp.sector == "Agricultura" %}selected{% endif %}>Agricultura</option>
+              <option value="Pescas" {% if emp.sector == "Pescas" %}selected{% endif %}>Pescas</option>
+              <option value="Construção" {% if emp.sector == "Construção" %}selected{% endif %}>Construção</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Score de Risco</label>
+            <select name="score" class="form-control">
+              <option value="A" {% if emp.score == 'A' or not emp.score %}selected{% endif %}>A — Muito Baixo</option>
+              <option value="B" {% if emp.score == 'B' %}selected{% endif %}>B — Baixo</option>
+              <option value="C" {% if emp.score == 'C' %}selected{% endif %}>C — Médio</option>
+              <option value="D" {% if emp.score == 'D' %}selected{% endif %}>D — Alto</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Capital (MT) *</label>
+            <input name="valor" id="f-valor" class="form-control" type="number" step="100" min="500" placeholder="25000" value="{{ emp.valor|default:'' }}" required oninput="calcPrev()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data de Início</label>
+            <input name="data_inicio" id="f-data" class="form-control" type="date" value="{{ emp.data_inicio|date:'Y-m-d'|default:'' }}" oninput="calcPrev()">
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label class="form-label">Finalidade</label>
+            <input name="finalidade" class="form-control" placeholder="Ex: Capital de giro" value="{{ emp.finalidade|default:'' }}">
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label class="form-label">Garantia</label>
+            <textarea name="garantia" class="form-control" style="height:70px;resize:none" placeholder="Stock, viatura, imóvel…">{{ emp.garantia|default:'' }}</textarea>
+          </div>
+        </div>
+
+        <!-- Taxas avançadas — colapsável -->
+        <div style="margin-top:4px;margin-bottom:16px">
+          <button type="button" id="btn-taxas" onclick="toggleTaxas()"
+            style="display:inline-flex;align-items:center;gap:6px;background:none;border:1px dashed var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--text3);cursor:pointer;transition:all .2s"
+            onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+            onmouseout="if(!window._taxasOpen){this.style.borderColor='var(--border)';this.style.color='var(--text3)'}">
+            <i class="fa-solid fa-pen"></i>
+            <span id="btn-taxas-label">Ajustar taxas padrão</span>
+          </button>
+
+          <div id="taxas-panel" style="display:none;margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;animation:fadeSlideIn .2s ease">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">
+              <i class="fa-solid fa-pen"></i> Taxas do contrato
+              {% if not request.user.eh_superadmin %}
+              <span style="font-weight:400;color:var(--danger);margin-left:6px">— apenas superadmin pode alterar</span>
+              {% endif %}
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Taxa de Juro (%/mês)</label>
+                <input name="taxa_juros" id="f-taxa" class="form-control" type="number" step="0.5" min="1"
+                       value="{{ emp.taxa_juros|default:banco.taxa_juros_padrao }}"
+                       {% if not request.user.eh_superadmin %}readonly style="background:var(--surface2);opacity:.6;cursor:not-allowed"{% endif %}
+                       oninput="calcPrev()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Multa por dia (%/dia)</label>
+                <input name="taxa_multa" id="f-multa" class="form-control" type="number" step="0.5" min="0"
+                       value="{{ emp.taxa_multa|default:banco.taxa_multa_padrao }}"
+                       {% if not request.user.eh_superadmin %}readonly style="background:var(--surface2);opacity:.6;cursor:not-allowed"{% endif %}
+                       oninput="calcPrev()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Dias tolerância c/ multa</label>
+                <input name="prazo_multa_dias" id="f-prazo" class="form-control" type="number" min="1"
+                       value="{{ emp.prazo_multa_dias|default:banco.prazo_multa_dias }}"
+                       {% if not request.user.eh_superadmin %}readonly style="background:var(--surface2);opacity:.6;cursor:not-allowed"{% endif %}
+                       oninput="calcPrev()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div id="preview" style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;display:none;margin-top:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px"><i class="fa-solid fa-chart-line"></i> Simulação do Contrato</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px">
+            <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Capital</div><div class="td-mono" style="font-size:16px;font-weight:700" id="pv-cap">—</div></div>
+            <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Juros (1 mês)</div><div class="td-mono" style="font-size:16px;font-weight:700;color:var(--warn)" id="pv-juros">—</div></div>
+            <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Total a pagar no prazo</div><div class="td-mono" style="font-size:18px;font-weight:700;color:var(--accent)" id="pv-total">—</div></div>
+          </div>
+          <div style="background:var(--danger-l);border:1px solid rgba(198,40,40,.15);border-radius:8px;padding:12px 14px">
+            <div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:10px"><i class="fa-solid fa-triangle-exclamation"></i> Cenário de atraso — multa acumulada por dia</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap" id="pv-escala"></div>
+            <div style="font-size:11px;color:var(--danger);margin-top:8px;font-weight:600" id="pv-incump"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:10px" id="pv-venc"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div><div class="card-title"><i class="fa-solid fa-camera"></i> Fotos da Garantia</div><div class="card-subtitle">Opcional</div></div></div>
+      <div class="card-body">
+        <input type="file" name="fotos_garantia" class="form-control" multiple accept="image/*">
+        {% if emp.fotos_garantia.all %}
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          {% for f in emp.fotos_garantia.all %}<img src="{{ f.foto.url }}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" style="position:sticky;top:80px">
+      <div class="card-header"><div><div class="card-title">Acções</div></div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <button type="submit" class="btn btn-primary btn-full btn-lg">{% if editar %}<i class="fa-solid fa-floppy-disk"></i> Guardar{% else %}<i class="fa-solid fa-check"></i> Registar Empréstimo{% endif %}</button>
+        <a href="{% url 'emprestimos' %}" class="btn btn-secondary btn-full">Cancelar</a>
+      </div>
+      <div style="padding:0 20px 20px">
+        <div style="background:var(--accent-l);border-radius:10px;padding:12px;font-size:12px;color:var(--accent);line-height:1.6">
+          <i class="fa-solid fa-calendar-alt"></i> Prazo fixo de <strong>30 dias</strong>. Vencimento calculado automaticamente.
+        </div>
+      </div>
+      {% if editar %}
+      <div style="padding:0 20px 20px">
+        <div class="detail-row"><span class="detail-key">Contrato</span><span class="detail-val" style="font-family:var(--ff-mono);font-size:12px">{{ emp.numero_contrato }}</span></div>
+        <div class="detail-row"><span class="detail-key">Vencimento</span><span class="detail-val" style="font-size:12px">{{ emp.data_vencimento|date:"d/m/Y"|default:"—" }}</span></div>
+        <div class="detail-row" style="border:none"><span class="detail-key">Estado</span><span class="detail-val"><span class="badge badge-{{ emp.status }}">{{ emp.get_status_display }}</span></span></div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</form>
+
+<style>
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+window._taxasOpen = false;
+
+function toggleTaxas() {
+  const panel = document.getElementById('taxas-panel');
+  const btn   = document.getElementById('btn-taxas');
+  const label = document.getElementById('btn-taxas-label');
+  window._taxasOpen = !window._taxasOpen;
+  if (window._taxasOpen) {
+    panel.style.display = 'block';
+    label.textContent   = 'Fechar taxas';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color       = 'var(--accent)';
+  } else {
+    panel.style.display = 'none';
+    label.textContent   = 'Ajustar taxas padrão';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color       = 'var(--text3)';
+  }
+}
+
+function fmt(v){return 'MT '+Math.round(v).toLocaleString('pt-PT');}
+function calcPrev(){
+  const cap=parseFloat(document.getElementById('f-valor').value)||0;
+  const taxa=parseFloat(document.getElementById('f-taxa').value)||30;
+  const multa=parseFloat(document.getElementById('f-multa').value)||15;
+  const prazo=parseInt(document.getElementById('f-prazo').value)||5;
+  const dataEl=document.getElementById('f-data');
+  const pv=document.getElementById('preview');
+  if(cap<500){pv.style.display='none';return;}
+  pv.style.display='block';
+  const juros=cap*taxa/100;
+  const total=cap+juros;
+  document.getElementById('pv-cap').textContent=fmt(cap);
+  document.getElementById('pv-juros').textContent=fmt(juros);
+  document.getElementById('pv-total').textContent=fmt(total);
+  if(dataEl&&dataEl.value){
+    const d=new Date(dataEl.value);d.setDate(d.getDate()+30);
+    document.getElementById('pv-venc').innerHTML='<i class="fa-solid fa-calendar-alt"></i> Vencimento: '+d.toLocaleDateString('pt-PT');
+  } else {
+    document.getElementById('pv-venc').innerHTML='';
+  }
+  const esc=document.getElementById('pv-escala');
+  esc.innerHTML='';
+  for(let d=1;d<=prazo;d++){
+    const ma=total*(multa/100)*d;
+    const td=total+ma;
+    const div=document.createElement('div');
+    div.style.cssText='text-align:center;background:rgba(198,40,40,.1);border-radius:8px;padding:8px 6px;flex:1;min-width:60px';
+    div.innerHTML='<div style="font-size:10px;color:var(--danger);font-weight:700">Dia '+d+'</div><div style="font-family:var(--ff-mono);font-size:11px;color:var(--danger);font-weight:700">+'+fmt(ma)+'</div><div style="font-size:9px;color:var(--text3)">'+fmt(td)+'</div>';
+    esc.appendChild(div);
+  }
+  const maxM=total*(multa/100)*prazo;
+  document.getElementById('pv-incump').innerHTML='<i class="fa-solid fa-triangle-exclamation"></i> Após '+prazo+' dias → Incumprimento. Máximo c/ multa: '+fmt(total+maxM);
+}
+calcPrev();
+{% endblock %}

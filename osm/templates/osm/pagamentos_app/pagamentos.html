@@ -1,0 +1,131 @@
+{% extends "osm/base.html" %}
+{% load humanize %}
+{% block title %}Pagamentos — OSM{% endblock %}
+{% block nav_pagamentos %}active{% endblock %}
+{% block topbar_title %}Pagamentos{% endblock %}
+
+{% block content %}
+
+<!-- STATS -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-body" style="padding:16px 20px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Total Recebido</div>
+      <div style="font-size:22px;font-weight:800;color:var(--success);letter-spacing:-.5px">MT {{ stats.total_recebido|floatformat:0|intcomma }}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">{{ stats.num_pagamentos }} quitação(ões)</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:0">
+    <div class="card-body" style="padding:16px 20px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Carteira Activa</div>
+      <div style="font-size:22px;font-weight:800;color:var(--accent);letter-spacing:-.5px">MT {{ stats.carteira_activa|floatformat:0|intcomma }}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">{{ stats.num_ativos }} empréstimo(s) activo(s)</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:0">
+    <div class="card-body" style="padding:16px 20px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Em Atraso</div>
+      <div style="font-size:22px;font-weight:800;color:var(--danger);letter-spacing:-.5px">MT {{ stats.total_vencido|floatformat:0|intcomma }}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">{{ stats.num_vencidos }} empréstimo(s) vencido(s)</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:0">
+    <div class="card-body" style="padding:16px 20px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Este Mês</div>
+      <div style="font-size:22px;font-weight:800;color:var(--gold);letter-spacing:-.5px">MT {{ stats.recebido_mes|floatformat:0|intcomma }}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">{{ stats.pagamentos_mes }} pagamento(s)</div>
+    </div>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<div class="card">
+  <div class="card-header">
+    <div><div class="card-title"><i class="fa-solid fa-filter" style="color:var(--accent)"></i> Filtros</div></div>
+    <a href="{% url 'pagamentos' %}" class="btn btn-secondary btn-sm">Limpar</a>
+  </div>
+  <div class="card-body" style="padding-bottom:12px">
+    <form method="get" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1;min-width:160px">
+        <label class="form-label">Pesquisar cliente / contrato</label>
+        <input name="q" class="form-control" placeholder="Nome, contrato…" value="{{ q }}">
+      </div>
+      <div style="min-width:130px">
+        <label class="form-label">De</label>
+        <input name="de" type="date" class="form-control" value="{{ filtro_de }}">
+      </div>
+      <div style="min-width:130px">
+        <label class="form-label">Até</label>
+        <input name="ate" type="date" class="form-control" value="{{ filtro_ate }}">
+      </div>
+      <button type="submit" class="btn btn-primary" style="align-self:flex-end">
+        <i class="fa-solid fa-magnifying-glass"></i> Filtrar
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- TABELA -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Histórico de Quitações</div>
+      <div class="card-subtitle">{{ pagamentos|length }} registo(s)</div>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap">Data</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:left">Contrato</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:left">Cliente</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:right">Capital</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:right">Juros</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:right">Multa</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:right">Total Pago</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:left">Registado por</th>
+          <th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);text-align:center">Doc.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pagamentos %}
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:12px 14px;font-size:12px;color:var(--text3)">{{ p.data_pagamento|date:"d/m/Y" }}</td>
+          <td style="padding:12px 14px">
+            <a href="{% url 'emprestimo_detalhe' p.credito.emprestimo.pk %}"
+               style="font-family:var(--ff-mono);font-size:12px;color:var(--accent);text-decoration:none;font-weight:600">
+              {{ p.credito.emprestimo.numero_contrato }}
+            </a>
+           </td>
+          <td style="padding:12px 14px;font-weight:600;font-size:13px">{{ p.credito.emprestimo.nome }}</td>
+          <td style="padding:12px 14px;text-align:right;font-family:var(--ff-mono);font-size:12px">MT {{ p.valor_capital|floatformat:2 }}</td>
+          <td style="padding:12px 14px;text-align:right;font-family:var(--ff-mono);font-size:12px;color:var(--warn)">MT {{ p.valor_juros|floatformat:2 }}</td>
+          <td style="padding:12px 14px;text-align:right;font-family:var(--ff-mono);font-size:12px;color:{% if p.valor_multa > 0 %}var(--danger){% else %}var(--text3){% endif %}">
+            {% if p.valor_multa > 0 %}+MT {{ p.valor_multa|floatformat:2 }}{% else %}—{% endif %}
+           </td>
+          <td style="padding:12px 14px;text-align:right;font-family:var(--ff-mono);font-size:13px;font-weight:700;color:var(--success)">MT {{ p.valor_total|floatformat:2 }}</td>
+          <td style="padding:12px 14px;font-size:12px;color:var(--text3)">{{ p.registado_por|default:"—" }}</td>
+          <td style="padding:12px 14px;text-align:center">
+            <a href="{% url 'baixar_contrato' p.credito.emprestimo.pk %}"
+               title="Baixar Contrato PDF"
+               style="color:var(--danger);font-size:18px;text-decoration:none;display:inline-block;transition:opacity .15s"
+               onmouseover="this.style.opacity='.65'" onmouseout="this.style.opacity='1'">
+              <i class="fa-solid fa-file-pdf"></i>
+            </a>
+           </td>
+         </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center;padding:48px;color:var(--text3)">
+            <i class="fa-solid fa-inbox" style="font-size:32px;display:block;margin-bottom:12px;opacity:.3"></i>
+            Nenhum pagamento encontrado.
+           </td>
+         </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "osm/base.html" %}
+{% load osm_tags %}
+{% block title %}Aprovações — OSM{% endblock %}
+{% block nav_aprovacoes %}active{% endblock %}
+{% block topbar_title %}Aprovações{% endblock %}
+{% block topbar_sub %}{{ pendentes|length }} pedido(s) pendente(s){% endblock %}
+
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-secondary btn-sm">
+  <i class="fa-solid fa-arrow-left"></i> Voltar
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+  <!-- PENDENTES -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="fa-solid fa-hourglass-half"></i> Aguardam Decisão</div>
+          <div class="card-subtitle">{{ pendentes|length }} pedido(s)</div>
+        </div>
+      </div>
+
+      {% for e in pendentes %}
+      <div style="padding:20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px">
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:14px">{{ e.nome }}</div>
+            <div style="font-size:12px;color:var(--text3);font-family:var(--ff-mono)">{{ e.numero_contrato }}</div>
+            <div style="font-size:11px;margin-top:4px">
+              <span class="badge badge-info" style="font-size:10px">
+                <i class="{{ e.tipo_cliente|tipo_cliente_icon }}"></i>
+                {{ e.tipo_cliente|status_label }}
+              </span>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:var(--ff-mono);font-size:18px;font-weight:700;color:var(--accent)">{{ e.valor|floatformat:0 }} MT</div>
+            <span class="badge score-{{ e.score }}">Score {{ e.score }}</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:14px">
+          <div><span style="color:var(--text3)">Sector: </span>{{ e.sector }}</div>
+          <div><span style="color:var(--text3)">Telefone: </span>{{ e.telefone|default:"—" }}</div>
+          <div><span style="color:var(--text3)">Registado: </span>{{ e.data_registo|date:"d/m H:i" }}</div>
+          <div><span style="color:var(--text3)">Vencimento: </span>{{ e.data_vencimento|date:"d/m/Y"|default:"—" }}</div>
+          {% if e.finalidade %}<div style="grid-column:span 2"><span style="color:var(--text3)">Finalidade: </span>{{ e.finalidade }}</div>{% endif %}
+          {% if e.garantia %}<div style="grid-column:span 2"><span style="color:var(--text3)">Garantia: </span>{{ e.garantia }}</div>{% endif %}
+        </div>
+
+        <!-- Botões de texto — sem ícones <i class="fa-solid fa-check"></i> ou ✗ -->
+        <div style="display:flex;gap:8px;align-items:center">
+          <form method="post" action="{% url 'aprovar' e.pk %}" style="flex:1"
+                onsubmit="return confirm('Confirmar aprovação do empréstimo de {{ e.nome }}?')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-full">
+              <i class="fa-solid fa-check"></i> Confirmar pagamento
+            </button>
+          </form>
+          <button type="button" class="btn btn-danger" style="flex:1"
+                  onclick="showReject({{ e.pk }})">
+            <i class="fa-solid fa-ban"></i> Rejeitar pagamento
+          </button>
+          <a href="{% url 'emprestimo_detalhe' e.pk %}" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-eye"></i>
+          </a>
+        </div>
+
+        <div id="reject-{{ e.pk }}" style="display:none;margin-top:12px">
+          <form method="post" action="{% url 'rejeitar' e.pk %}">
+            {% csrf_token %}
+            <textarea name="motivo" class="form-control"
+                      style="height:70px;resize:none;margin-bottom:8px"
+                      placeholder="Motivo da rejeição (obrigatório)…" required></textarea>
+            <button type="submit" class="btn btn-danger btn-full btn-sm"
+                    onclick="return confirm('Confirmar rejeição?')">
+              <i class="fa-solid fa-ban"></i> Confirmar Rejeição
+            </button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <div style="padding:48px;text-align:center;color:var(--text3)">
+        <i class="fa-solid fa-circle-check" style="font-size:32px;margin-bottom:12px;color:var(--success)"></i>
+        <div style="font-size:14px;font-weight:600">Nenhum pedido pendente</div>
+        <div style="font-size:12px;margin-top:4px">Todos os pedidos foram processados</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- REJEITADOS RECENTES -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="fa-solid fa-ban"></i> Rejeitados Recentes</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Valor</th><th>Motivo</th></tr></thead>
+          <tbody>
+            {% for e in rejeitados %}
+            <tr>
+              <td>
+                <div class="td-primary">{{ e.nome }}</div>
+                <div class="td-sub">{{ e.numero_contrato }}</div>
+              </td>
+              <td class="td-mono" style="font-size:12px">{{ e.valor|floatformat:0 }} MT</td>
+              <td style="font-size:12px;color:var(--text3)">{{ e.motivo_rejeicao|truncatechars:50 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" style="text-align:center;padding:28px;color:var(--text3)">
+              <i class="fa-solid fa-circle-check"></i> Sem rejeições recentes.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+function showReject(pk) {
+  const div = document.getElementById('reject-' + pk);
+  div.style.display = div.style.display === 'none' ? 'block' : 'none';
+}
+{% endblock %}

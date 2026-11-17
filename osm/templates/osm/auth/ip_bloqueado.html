@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acesso Bloqueado — OSM Microcrédito</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {--accent:#1565c0;--danger:#c62828;--bg:#f5f7fa;--card:#fff;--text:#1a2332;--text2:#5a6478;--border:#e0e5ef}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:var(--card);border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.12);padding:48px 40px;max-width:460px;width:100%;text-align:center}
+  .icon-wrap{width:80px;height:80px;border-radius:50%;background:rgba(198,40,40,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+  .icon-wrap i{font-size:36px;color:var(--danger)}
+  h1{font-size:22px;font-weight:800;color:var(--text);margin-bottom:10px}
+  p{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:8px}
+  .badge{display:inline-block;background:rgba(198,40,40,.1);color:var(--danger);font-size:12px;font-weight:700;padding:4px 14px;border-radius:20px;margin:16px 0 24px}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .15s}
+  .btn:hover{opacity:.88}
+  .info{margin-top:24px;padding:14px;background:#f0f4ff;border-radius:10px;font-size:12px;color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon-wrap"><i class="fa-solid fa-shield-halved"></i></div>
+  <h1>Acesso Temporariamente Bloqueado</h1>
+  <p>O seu endereço IP foi bloqueado por exceder o limite de tentativas de login.</p>
+  <p>Foram detectadas <strong>{{ max_tentativas }}</strong> tentativas falhadas consecutivas.</p>
+  <span class="badge"><i class="fa-solid fa-clock"></i> &nbsp;Bloqueio por {{ minutos }} minutos</span>
+  <br>
+  <a href="/login/" class="btn"><i class="fa-solid fa-arrow-left"></i> Voltar ao Login</a>
+  <div class="info">
+    <i class="fa-solid fa-circle-info"></i>
+    &nbsp;Se isto foi um erro, aguarde {{ minutos }} minutos e tente novamente.
+    Em caso de dificuldades, contacte o administrador do sistema.
+  </div>
+</div>
+</body>
+</html>
