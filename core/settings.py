@@ -88,16 +88,20 @@ TEMPLATES = [
 ]
 
 # ── BASE DE DADOS ──────────────────────────────────────────────────────
+import os
+
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    # Fallback para desenvolvimento local / testes
+    "postgresql://postgres.xqybbfegbrobdicwhoqf:Aventureiro%402020@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
+)
+
 DATABASES = {
-    'default': dj_database_url.parse(
-        "postgresql://postgres.vnyzklcnmammgnckttgw:Aventureiro%402020@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
-    )
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=60)
 }
 
-# Adiciona opções personalizadas
-DATABASES['default']['CONN_MAX_AGE'] = 60   # mantém conexão por 60s
-DATABASES['default']['OPTIONS'] = {
-    'connect_timeout': 20,   # timeout de conexão (psycopg2)
+DATABASES["default"]["OPTIONS"] = {
+    "connect_timeout": 20,
 }
 
 # ── CACHE ──────────────────────────────────────────────────────────────
