@@ -15,10 +15,9 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
-    'i-sgb-backend-1.onrender.com',
-    'i-sgb-backend.onrender.com',
+    'osm-gny9.onrender.com',
     'osm.co.mz',
-    'app.osm.co.mz',
+    'work.osm.co.mz',
 ]
 if _RENDER_HOST:
     ALLOWED_HOSTS.append(_RENDER_HOST)
@@ -28,10 +27,9 @@ if DEBUG:
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'https://i-sgb-backend.onrender.com',
+    'https://work.osm.co.mz',
     'https://osm.co.mz',
     'https://app.osm.co.mz',
-    'https://i-sgb-backend-1.onrender.com',
 ]
 if _RENDER_HOST:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_RENDER_HOST}')
